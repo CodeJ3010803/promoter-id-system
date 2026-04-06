@@ -1,0 +1,237 @@
+{
+  "timestamp": "2026-03-30T14:30:19.021Z",
+  "template": {
+    "id": 17,
+    "name": "Standard ID Card v1",
+    "width": 1080,
+    "height": 1920
+  },
+  "generatedCount": 3,
+  "ids": [
+    {
+      "promoter_id": "P002",
+      "full_name": "Maria Cruz",
+      "employeeno": "E002",
+      "brand": "Brand B",
+      "location": "Quezon City",
+      "division": "Marketing",
+      "contact_no": "+639179876543",
+      "placeholderReplacements": {
+        "[employeeno]": "E002",
+        "[promoter_id]": "P002",
+        "[full_name]": "Maria Cruz",
+        "[brand]": "Brand B",
+        "[category]": "Standard",
+        "[location]": "Quezon City",
+        "[contact_no]": "+639179876543",
+        "[date_hired]": "2023-02-20",
+        "[division]": "Marketing",
+        "[emergency_contact]": "+639175559999",
+        "[contact_person]": "Juan Cruz",
+        "[hrgen]": "HR-002"
+      },
+      "frontCanvasElements": 9,
+      "backCanvasElements": 8,
+      "frontSampleObjects": [
+        {
+          "type": "rect",
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "type": "text",
+          "text": "Maria Cruz",
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "type": "text",
+          "text": "ID: P002",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "backSampleObjects": [
+        {
+          "type": "rect",
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "type": "text",
+          "text": "COMPANY INFORMATION",
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "type": "text",
+          "text": "Division: Marketing",
+          "position": {
+            "x": 100,
+            "y": 350
+          }
+        }
+      ]
+    },
+    {
+      "promoter_id": "P003",
+      "full_name": "Robert Dela Cruz",
+      "employeeno": "E003",
+      "brand": "Brand A",
+      "location": "Makati",
+      "division": "Operations",
+      "contact_no": "+639178882211",
+      "placeholderReplacements": {
+        "[employeeno]": "E003",
+        "[promoter_id]": "P003",
+        "[full_name]": "Robert Dela Cruz",
+        "[brand]": "Brand A",
+        "[category]": "Premium",
+        "[location]": "Makati",
+        "[contact_no]": "+639178882211",
+        "[date_hired]": "2023-03-10",
+        "[division]": "Operations",
+        "[emergency_contact]": "+639175556666",
+        "[contact_person]": "Ana Dela Cruz",
+        "[hrgen]": "HR-003"
+      },
+      "frontCanvasElements": 9,
+      "backCanvasElements": 8,
+      "frontSampleObjects": [
+        {
+          "type": "rect",
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "type": "text",
+          "text": "Robert Dela Cruz",
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "type": "text",
+          "text": "ID: P003",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "backSampleObjects": [
+        {
+          "type": "rect",
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "type": "text",
+          "text": "COMPANY INFORMATION",
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "type": "text",
+          "text": "Division: Operations",
+          "position": {
+            "x": 100,
+            "y": 350
+          }
+        }
+      ]
+    },
+    {
+      "promoter_id": "E101",
+      "full_name": "Maria Santos",
+      "employeeno": "E101",
+      "brand": "Brand A",
+      "location": "Manila",
+      "division": "Sales",
+      "contact_no": "+639175551234",
+      "placeholderReplacements": {
+        "[employeeno]": "E101",
+        "[promoter_id]": "E101",
+        "[full_name]": "Maria Santos",
+        "[brand]": "Brand A",
+        "[category]": "Category 1",
+        "[location]": "Manila",
+        "[contact_no]": "+639175551234",
+        "[date_hired]": "2023-06-15",
+        "[division]": "Sales",
+        "[emergency_contact]": "+639175555678",
+        "[contact_person]": "Juan Santos",
+        "[hrgen]": "HR-101"
+      },
+      "frontCanvasElements": 9,
+      "backCanvasElements": 8,
+      "frontSampleObjects": [
+        {
+          "type": "rect",
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "type": "text",
+          "text": "Maria Santos",
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "type": "text",
+          "text": "ID: E101",
+          "position": {
+            "x": 100,
+            "y": 300
+          }
+        }
+      ],
+      "backSampleObjects": [
+        {
+          "type": "rect",
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "type": "text",
+          "text": "COMPANY INFORMATION",
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "type": "text",
+          "text": "Division: Sales",
+          "position": {
+            "x": 100,
+            "y": 350
+          }
+        }
+      ]
+    }
+  ]
+}

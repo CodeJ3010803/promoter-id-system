@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standard ID Generator - Promoter ID System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+
+    /* ID Card Structure */
+    .id-card-container {
+      width: 423px;
+      height: 505px;
+      background: #ffeb00;
+      border: 1px solid #ddd;
+      overflow: hidden;
+      margin: 0 auto;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .id-card {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Section - Container 1 */
+    .container-1 {
+      height: 260px;
+      background: #ffeb00;
+      padding: 20px 5px 5px 5px;
+      margin-top: 0px;
+      display: flex;
+      gap: 15px;
+      position: relative;
+      align-items: flex-start;
+      border-bottom: 2px solid #000;
+      /* Divider */
+    }
+
+    .photo-section {
+      flex-shrink: 0;
+      margin-left: 1px;
+    }
+
+    .photo-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 4px solid white;
+      background: #ffffff;
+    }
+
+    .id-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .info-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      color: #000080;
+      padding-top: 5px;
+      text-align: center;
+      align-items: center;
+      padding-right: 5px;
+    }
+
+    .nickname-text {
+      font-size: 45px;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 0.95;
+      margin-bottom: 2px;
+    }
+
+    .fullname-text {
+      font-size: 17px;
+      font-weight: 900;
+      margin-bottom: 12px;
+      text-transform: capitalize;
+    }
+
+    .brand-text {
+      font-size: 31px;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .position-text {
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .control-box {
+      position: absolute;
+      bottom: 6px;
+      right: 5px;
+      background: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      min-width: 120px;
+      min-height: 30px;
+      justify-content: center;
+      border: 1px solid #ddd;
+    }
+
+    .control-label {
+      font-size: 8px;
+      font-weight: 800;
+      color: #000080;
+      text-align: left;
+      line-height: 1;
+    }
+
+    .control-value {
+      font-size: 14px;
+      font-weight: 900;
+      color: #000080;
+      text-align: right;
+      line-height: 1;
+    }
+
+    /* Bottom Section - Container 2 */
+    .container-2 {
+      height: 250px;
+      background: #ffeb00;
+      flex: 1;
+      padding: 5px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .bottom-layout {
+      display: flex;
+      gap: 2px;
+      height: 100%;
+    }
+
+    .bottom-left {
+      flex: 0 0 180px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding-top: 10px;
+    }
+
+    .gate-pass-text {
+      font-size: 27px;
+      font-weight: 900;
+      color: #000080;
+      text-transform: uppercase;
+      margin-top: 5px;
+      margin-bottom: 5px;
+      white-space: nowrap;
+    }
+
+    .barcode-container {
+      background: white;
+      padding: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+
+    .id-barcode {
+      width: 100%;
+      height: auto;
+    }
+
+    .bottom-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+    }
+
+    .detail-item {
+      background: white;
+      border-radius: 3px;
+      padding: 2px 8px 5px 8px;
+      border: 1px solid #ddd;
+      height: 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .detail-label {
+      font-size: 8px;
+      font-weight: 800;
+      color: #000080;
+      text-transform: uppercase;
+    }
+
+    .detail-value {
+      font-size: 10px;
+      font-weight: 900;
+      color: #000;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .emergency-box-small {
+      background: white;
+      border-radius: 3px;
+      padding: 6px 5px 5px 5px;
+      text-align: center;
+      border: 1px solid #ddd;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      margin-bottom: 2px;
+    }
+
+    .emergency-text-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #000;
+      line-height: 1.2;
+    }
+
+    .emergency-text-label+.emergency-text-label {
+      margin-top: 5px;
+    }
+
+    .emergency-name {
+      font-size: 16px;
+      font-weight: 900;
+      color: #000;
+      margin-top: 20px;
+      line-height: 1;
+    }
+
+    .emergency-phone {
+      font-size: 12px;
+      font-weight: 900;
+      color: #000;
+      line-height: 1;
+      margin-top: 5px;
+    }
+
+    /* Interface & Preview Styles */
+    .preview-container {
+      display: grid;
+      gap: 30px;
+    }
+
+    .page-preview {
+      background: white;
+      border: 1px solid #ccc;
+      padding: 40px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .page-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .page-grid.single-column {
+      grid-template-columns: 1fr;
+    }
+
+    @media print {
+      body {
+        background: white;
+        margin: 0;
+      }
+
+      .page-preview {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white p-6 shadow-md">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold">Promoter ID Generator</h1>
+          <p class="text-yellow-100 opacity-90">Custom Template Engine</p>
+        </div>
+        <div class="flex gap-3">
+          <a href="/" class="bg-yellow-700 bg-opacity-30 hover:bg-opacity-50 px-4 py-2 rounded transition">Dashboard</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 p-8">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+          <!-- Control Panel -->
+          <div class="lg:col-span-1 space-y-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 class="text-xl font-bold mb-4 text-gray-800">1. Input Data</h2>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-600 mb-2">Employee IDs / Numbers</label>
+                  <textarea id="employeeNumbers" rows="10"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono text-sm"
+                    placeholder="Enter one ID per line..."></textarea>
+                </div>
+                <button onclick="generatePreview()"
+                  class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg shadow-md transition transform active:scale-95">
+                  Generate Preview
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 class="text-xl font-bold mb-4 text-gray-800">2. Export Results</h2>
+              <div class="space-y-3">
+                <button onclick="exportPDF()"
+                  class="w-full bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-lg transition">Export to
+                  PDF</button>
+                <button onclick="exportWord()"
+                  class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-lg transition">Export to
+                  Word</button>
+                <button onclick="printIDs()"
+                  class="w-full bg-gray-800 hover:bg-black text-white py-2.5 rounded-lg transition">Print
+                  Directly</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status & Preview Area -->
+          <div class="lg:col-span-3 space-y-6">
+            <div id="statusInfo" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="text-center text-gray-400 py-4">
+                <p>Enter data and click generate to start</p>
+              </div>
+            </div>
+
+            <div id="previewSection" style="display: none;" class="space-y-4">
+              <div class="flex justify-between items-center px-2">
+                <h2 class="text-2xl font-bold text-gray-800">Preview</h2>
+                <div class="text-sm font-medium text-gray-500">
+                  <span id="pageInfo">0 Pages</span> • <span id="previewCount">0</span> ID Cards
+                </div>
+              </div>
+              <div id="previewContainer" class="preview-container">
+                <!-- Pages go here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const PHOTO_SIZE = 180;
+    let generatedData = [];
+
+    async function cropPhoto(url) {
+      return new Promise((resolve) => {
+        fabric.Image.fromURL(url, (img) => {
+          const canvas = document.createElement('canvas');
+          canvas.width = PHOTO_SIZE;
+          canvas.height = PHOTO_SIZE;
+          const fc = new fabric.StaticCanvas(canvas, { width: PHOTO_SIZE, height: PHOTO_SIZE });
+
+          const scale = Math.max(PHOTO_SIZE / img.width, PHOTO_SIZE / img.height);
+          img.set({
+            left: PHOTO_SIZE / 2,
+            top: PHOTO_SIZE / 2,
+            originX: 'center',
+            originY: 'center',
+            scaleX: scale,
+            scaleY: scale
+          });
+
+          const mask = new fabric.Circle({
+            radius: PHOTO_SIZE / 2,
+            left: PHOTO_SIZE / 2,
+            top: PHOTO_SIZE / 2,
+            originX: 'center',
+            originY: 'center',
+            absolutePositioned: true
+          });
+
+          img.set('clipPath', mask);
+          fc.add(img);
+          fc.renderAll();
+          resolve(fc.toDataURL({ format: 'png' }));
+          fc.dispose();
+        }, { crossOrigin: 'anonymous' });
+      });
+    }
+
+    async function generatePreview() {
+      const input = document.getElementById('employeeNumbers').value.trim();
+      if (!input) {
+        alert('Please enter ID numbers');
+        return;
+      }
+
+      const ids = input.split('\n').map(v => v.trim()).filter(v => v);
+      const status = document.getElementById('statusInfo');
+      status.innerHTML = '<div class="flex items-center justify-center gap-2 text-yellow-600"><div class="animate-spin h-5 w-5 border-2 border-yellow-500 border-t-transparent rounded-full font-bold"></div> Fetching data...</div>';
+
+      generatedData = [];
+      for (const id of ids) {
+        try {
+          const res = await fetch(`/api/promoters?search=${encodeURIComponent(id)}`);
+          const json = await res.json();
+          if (json.success && json.promoters.length > 0) {
+            generatedData.push(json.promoters[0]);
+          }
+        } catch (e) { }
+      }
+
+      if (generatedData.length === 0) {
+        status.innerHTML = '<div class="text-red-500 font-bold">❌ No records found</div>';
+        return;
+      }
+
+      status.innerHTML = `<div class="text-green-600 font-bold">✓ Successfully loaded ${generatedData.length} cards</div>`;
+      await renderCards();
+    }
+
+    async function renderCards() {
+      const container = document.getElementById('previewContainer');
+      container.innerHTML = '';
+
+      const idsPerPage = 4;
+      const totalPages = Math.ceil(generatedData.length / idsPerPage);
+
+      document.getElementById('previewCount').textContent = generatedData.length;
+      document.getElementById('pageInfo').textContent = `${totalPages} Page${totalPages > 1 ? 's' : ''}`;
+      document.getElementById('previewSection').style.display = 'block';
+
+      for (let p = 0; p < totalPages; p++) {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page-preview';
+
+        const grid = document.createElement('div');
+        grid.className = 'page-grid';
+
+        const pageData = generatedData.slice(p * idsPerPage, (p + 1) * idsPerPage);
+
+        for (const promoter of pageData) {
+          const photoUrl = `/api/photos/${encodeURIComponent(promoter.employeeno || promoter.promoter_id)}`;
+          const cropped = await cropPhoto(photoUrl);
+          grid.innerHTML += createCardHTML(promoter, cropped);
+
+          // Generate barcode after adding to DOM
+          setTimeout(() => {
+            try {
+              JsBarcode(`#barcode-${promoter.employeeno || promoter.promoter_id}`, promoter.employeeno || promoter.promoter_id, {
+                format: "CODE128",
+                width: 2,
+                height: 80,
+                displayValue: false,
+                margin: 0
+              });
+            } catch (e) { }
+          }, 100);
+        }
+
+        pageDiv.appendChild(grid);
+        container.appendChild(pageDiv);
+      }
+    }
+
+    function createCardHTML(p, photo) {
+      const nickname = (p.nickname || p.first_name || 'N/A').toUpperCase();
+      const fullname = (p.full_name || `${p.first_name} ${p.last_name}`).trim();
+      const brand = (p.brand || 'SAMSUNG').toUpperCase();
+      const position = (p.position || p.category || 'PROMOTER').toUpperCase();
+      const id = p.employeeno || p.promoter_id || '---';
+
+      return `
+        <div class="id-card-container">
+          <div class="id-card">
+            <div class="container-1">
+              <div class="photo-section">
+                <div class="photo-circle">
+                  <img src="${photo}" class="id-photo" onerror="this.src='/app/uploads/photos/sample.jpg'">
+                </div>
+              </div>
+              <div class="info-section">
+                <div class="nickname-text">${nickname}</div>
+                <div class="fullname-text">${fullname}</div>
+                <div class="brand-text">${brand}</div>
+                <div class="position-text">${position}</div>
+              </div>
+              <div class="control-box">
+                <span class="control-label">Control No.:</span>
+                <span class="control-value">${id}</span>
+              </div>
+            </div>
+            <div class="container-2">
+              <div class="bottom-layout">
+                <div class="bottom-left">
+                  <div class="gate-pass-text">GATE PASS</div>
+                  <div class="barcode-container">
+                    <svg id="barcode-${p.employeeno || p.promoter_id}" class="id-barcode"></svg>
+                  </div>
+                </div>
+                <div class="bottom-right">
+                  <div class="details-grid">
+                    <div class="detail-item">
+                      <div class="detail-label">EMPLOYER:</div>
+                      <div class="detail-value">ABENSON</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">LOCATION:</div>
+                      <div class="detail-value">${p.location || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">POSITION:</div>
+                      <div class="detail-value">${p.function || 'N/A'}</div>
+                    </div>
+                    <div class="detail-item">
+                      <div class="detail-label">VALIDITY:</div>
+                      <div class="detail-value">${(() => {
+          if (!p.date_expired) return 'N/A';
+          const parts = p.date_expired.split('-');
+          if (parts.length !== 3) return p.date_expired;
+          return `${parts[1]}<b>/ </b> ${parts[2]}<b>/ </b> ${parts[0]}`;
+        })()}</div>
+                    </div>
+                  </div>
+                  <div class="emergency-box-small">
+                    <div class="emergency-text-label">In case of emergency,</div>
+                    <div class="emergency-text-label">please notify</div>
+                    <div class="emergency-name">${p.contact_person || 'N/A'}</div>
+                    <div class="emergency-phone">${p.contact_no || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' });
+      const pages = document.querySelectorAll('.page-preview');
+
+      for (let i = 0; i < pages.length; i++) {
+        if (i > 0) doc.addPage();
+        const canvas = await html2canvas(pages[i], { scale: 2 });
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, 195, 0);
+      }
+      doc.save('Promoter_IDs.pdf');
+    }
+
+    async function exportWord() {
+      const html = `
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial; }
+              .page { page-break-after: always; padding: 20px; border: 1px solid #eee; margin-bottom: 20px; }
+            </style>
+          </head>
+          <body>
+            ${document.getElementById('previewContainer').innerHTML}
+          </body>
+        </html>
+      `;
+      const blob = new Blob([html], { type: 'application/msword' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'Promoter_IDs.doc';
+      link.click();
+    }
+
+    function printIDs() {
+      const win = window.open('', '_blank');
+      win.document.write(`
+        <html>
+          <head>
+            <title>Print IDs</title>
+            <style>
+              ${document.querySelector('style').innerHTML}
+              body { background: white; }
+              .page-preview { border: none; box-shadow: none; margin: 0; padding: 10px; }
+            </style>
+          </head>
+          <body>
+            ${document.getElementById('previewContainer').innerHTML}
+            <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
+          </body>
+        </html>
+      `);
+      win.document.close();
+    }
+  </script>
+</body>
+
+</html>

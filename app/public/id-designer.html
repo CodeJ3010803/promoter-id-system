@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ID Designer - HR Management System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .canvas-container {
+      border: 2px solid #333;
+      background: white;
+      position: relative !important;
+      display: block !important;
+      z-index: 10;
+      margin: 0 auto;
+      transition: all 0.2s ease;
+    }
+
+    .canvas-container.active-canvas {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    }
+
+    .field-button {
+      @apply px-3 py-2 m-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition cursor-move selected:bg-blue-700;
+    }
+
+    .tool-button {
+      @apply px-3 py-2 m-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded transition;
+    }
+
+    .tool-button.active {
+      @apply bg-green-700;
+    }
+
+    .color-picker {
+      @apply w-full h-10 cursor-pointer border rounded;
+    }
+
+    .canvas-label {
+      @apply text-center font-bold py-2 bg-gray-200;
+    }
+
+    .control-panel {
+      @apply max-h-[80vh] overflow-y-auto z-5;
+    }
+
+    .canvas-container canvas {
+      z-index: 10 !important;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      transform: scale(0.9) translateY(20px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: white;
+      border-radius: 1.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 100%;
+      max-width: 42rem;
+      margin: 1.5rem;
+      overflow: hidden;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .canvas-preview {
+      width: 200px;
+      height: 300px;
+      border: 1px solid #ccc;
+      background: white;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-800 text-white p-6 shadow-lg">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-4xl font-bold mb-2">ID Designer</h1>
+            <p class="text-purple-100">Design and manage employee ID card templates</p>
+          </div>
+          <div class="flex gap-4">
+            <a href="/promoters" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50 transition">
+              ← Promoters List
+            </a>
+            <a href="/" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50 transition">
+              ← Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8">
+      <div class="max-w-7xl mx-auto">
+
+        <!-- Templates Management -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold">Template Management</h2>
+            <div class="flex gap-2">
+              <input type="text" id="templateNameInput" placeholder="Enter template name..."
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <button onclick="saveTemplate()"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+                💾 Save Template
+              </button>
+              <button onclick="loadTemplateModal()"
+                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition">
+                📂 Load Template
+              </button>
+              <button onclick="newTemplate()"
+                class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition">
+                ✨ New Template
+              </button>
+              <button onclick="applyHanesSamsungPreset()"
+                class="bg-yellow-500 hover:bg-yellow-600 text-blue-800 font-bold px-4 py-2 rounded-lg transition">
+                🎯 Apply Hanes/Samsung Preset
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="grid grid-cols-4 gap-6">
+
+          <!-- Left Panel: Tools and Fields -->
+          <div class="col-span-1 bg-white p-4 rounded-lg shadow-md max-h-96 overflow-y-auto">
+            <h3 class="text-lg font-semibold mb-4">Fields & Tools</h3>
+
+            <!-- Fields Section -->
+            <div class="mb-6">
+              <h4 class="font-semibold text-sm text-gray-700 mb-2">Data Fields (Drag to Canvas)</h4>
+              <p class="text-xs text-gray-500 mb-2 italic">Drag fields to the canvas or click to add</p>
+              <div class="space-y-1 text-xs">
+                <button draggable="true" ondragstart="dragField('[employeeno]', event)"
+                  onclick="addField('[employeeno]')" class="field-button w-full text-left">👤 Employee No</button>
+                <button draggable="true" ondragstart="dragField('[promoter_id]', event)"
+                  onclick="addField('[promoter_id]')" class="field-button w-full text-left">🆔 Promoter ID</button>
+                <button draggable="true" ondragstart="dragField('[full_name]', event)" onclick="addField('[full_name]')"
+                  class="field-button w-full text-left">📝 Full Name</button>
+                <button draggable="true" ondragstart="dragField('[date_hired]', event)"
+                  onclick="addField('[date_hired]')" class="field-button w-full text-left">📅 Date Hired</button>
+                <button draggable="true" ondragstart="dragField('[date_expired]', event)"
+                  onclick="addField('[date_expired]')" class="field-button w-full text-left">📅 Date Expired</button>
+                <button draggable="true" ondragstart="dragField('[brand]', event)" onclick="addField('[brand]')"
+                  class="field-button w-full text-left">🏢 Brand</button>
+                <button draggable="true" ondragstart="dragField('[category]', event)" onclick="addField('[category]')"
+                  class="field-button w-full text-left">📂 Category</button>
+                <button draggable="true" ondragstart="dragField('[employer]', event)" onclick="addField('[employer]')"
+                  class="field-button w-full text-left">🏭 Employer</button>
+                <button draggable="true" ondragstart="dragField('[nickname]', event)" onclick="addField('[nickname]')"
+                  class="field-button w-full text-left">🏷️ Nickname</button>
+                <button draggable="true" ondragstart="dragField('[position]', event)" onclick="addField('[position]')"
+                  class="field-button w-full text-left">💼 Position</button>
+                <button draggable="true" ondragstart="dragField('[function]', event)" onclick="addField('[function]')"
+                  class="field-button w-full text-left">🛠️ Function</button>
+                <button draggable="true" ondragstart="dragField('[contact_no]', event)"
+                  onclick="addField('[contact_no]')" class="field-button w-full text-left">📞 Contact No</button>
+                <button draggable="true" ondragstart="dragField('[address]', event)" onclick="addField('[address]')"
+                  class="field-button w-full text-left">📍 Address</button>
+                <button draggable="true" ondragstart="dragField('[emergency_contact]', event)"
+                  onclick="addField('[emergency_contact]')" class="field-button w-full text-left">🚨 Emergency</button>
+                <button draggable="true" ondragstart="dragField('[contact_person]', event)"
+                  onclick="addField('[contact_person]')" class="field-button w-full text-left">👥 Contact
+                  Person</button>
+                <button draggable="true" ondragstart="dragField('[location]', event)" onclick="addField('[location]')"
+                  class="field-button w-full text-left">🌍 Location</button>
+                <button draggable="true" ondragstart="dragField('[district]', event)" onclick="addField('[district]')"
+                  class="field-button w-full text-left">📍 District</button>
+                <button draggable="true" ondragstart="dragField('[division]', event)" onclick="addField('[division]')"
+                  class="field-button w-full text-left">🏛️ Division</button>
+                <button draggable="true" ondragstart="dragField('[hrgen]', event)" onclick="addField('[hrgen]')"
+                  class="field-button w-full text-left">📋 HR Gen</button>
+                <button draggable="true" ondragstart="dragField('[control_no]', event)"
+                  onclick="addField('[control_no]')" class="field-button w-full text-left">🔢 Control No</button>
+                <button draggable="true" ondragstart="dragField('{{photo}}', event)" onclick="addPhoto()"
+                  class="field-button w-full text-left">📸 Photo</button>
+              </div>
+            </div>
+
+            <!-- Drawing Tools -->
+            <div class="mb-6">
+              <h4 class="font-semibold text-sm text-gray-700 mb-2">Drawing Tools</h4>
+              <div class="space-y-1">
+                <button onclick="addText()" class="tool-button w-full">+ Text Label</button>
+                <button onclick="addLine()" class="tool-button w-full">━ Line</button>
+                <button onclick="addRectangle()" class="tool-button w-full">▭ Box/Rectangle</button>
+                <button onclick="addCircle()" class="tool-button w-full">● Circle</button>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 italic">Add labels & shapes. Click to select, resize with handles or
+                delete with right-click</p>
+            </div>
+          </div>
+
+          <!-- Center Panel: Canvases (Side by Side) -->
+          <div class="col-span-2 grid grid-cols-2 gap-4">
+            <!-- Front Canvas -->
+            <div ondrop="handleDrop(event, 'front')" ondragover="handleDragOver(event)"
+              ondragleave="handleDragLeave(event)">
+              <div class="canvas-label">FRONT SIDE</div>
+              <canvas id="frontCanvas" class="canvas-container active-canvas" width="324" height="204"></canvas>
+              <p class="text-xs text-gray-500 mt-2">✅ Drag fields • 🖱️ Drag to move • 📐 Resize handles • DEL to delete
+                • ↑↓ Layering</p>
+            </div>
+
+            <!-- Back Canvas -->
+            <div ondrop="handleDrop(event, 'back')" ondragover="handleDragOver(event)"
+              ondragleave="handleDragLeave(event)">
+              <div class="canvas-label">BACK SIDE</div>
+              <canvas id="backCanvas" class="canvas-container" width="324" height="204"></canvas>
+              <p class="text-xs text-gray-500 mt-2">✅ Drag fields • 🖱️ Drag to move • 📐 Resize handles • DEL to delete
+                • ↑↓ Layering</p>
+            </div>
+          </div>
+
+          <!-- Right Panel: Properties -->
+          <div class="col-span-1 bg-white p-4 rounded-lg shadow-md max-h-96 overflow-y-auto">
+            <h3 class="text-lg font-semibold mb-4">Properties</h3>
+
+            <div id="noSelection" class="text-gray-500 text-center py-8">
+              <p class="mb-2">Select an element to edit properties</p>
+              <p class="text-xs">Click on a field or photo on the canvas</p>
+            </div>
+
+            <div id="selectionProperties" class="space-y-4 hidden">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Font Size</label>
+                <input type="range" id="fontSize" min="8" max="72" value="20" onchange="updateSelected()"
+                  class="w-full">
+                <span class="text-xs text-gray-500" id="fontSizeValue">20px</span>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Font Family</label>
+                <select id="fontFamily" onchange="updateSelected()"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option value="Arial">Arial</option>
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Courier New">Courier New</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Georgia">Georgia</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Text Color</label>
+                <input type="color" id="objectColor" value="#000000" onchange="updateSelected()" class="color-picker">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Fill Color (Shape)</label>
+                <input type="color" id="objectFill" value="#ffffff" onchange="updateSelected()" class="color-picker">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Stroke/Border Color</label>
+                <input type="color" id="objectStroke" value="#000000" onchange="updateSelected()" class="color-picker">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Stroke Width</label>
+                <input type="range" id="strokeWidth" min="0" max="20" value="2" onchange="updateSelected()"
+                  class="w-full">
+                <span class="text-xs text-gray-500" id="strokeWidthValue">2px</span>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Opacity</label>
+                <input type="range" id="objectOpacity" min="0" max="1" step="0.1" value="1" onchange="updateSelected()"
+                  class="w-full">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Text Content</label>
+                <input type="text" id="objectText" onchange="updateSelected()"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Rotation</label>
+                <input type="range" id="objectRotate" min="0" max="360" step="1" value="0" onchange="updateSelected()"
+                  class="w-full">
+                <span class="text-xs text-gray-500" id="rotateValue">0°</span>
+              </div>
+
+              <!-- Alignment Section -->
+              <div class="border-t pt-4 mt-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Alignment</label>
+                <div class="grid grid-cols-3 gap-1 mb-2">
+                  <button onclick="alignElement('left')"
+                    class="bg-blue-400 hover:bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Align Left">
+                    ⬅️
+                  </button>
+                  <button onclick="alignElement('center')"
+                    class="bg-blue-400 hover:bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Align Center">
+                    🎯
+                  </button>
+                  <button onclick="alignElement('right')"
+                    class="bg-blue-400 hover:bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Align Right">
+                    ➡️
+                  </button>
+                </div>
+                <div class="grid grid-cols-3 gap-1">
+                  <button onclick="alignElement('top')"
+                    class="bg-blue-400 hover:bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Align Top">
+                    ⬆️
+                  </button>
+                  <button onclick="alignElement('middle')"
+                    class="bg-blue-400 hover:bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Align Middle">
+                    ⬇️
+                  </button>
+                  <button onclick="alignElement('bottom')"
+                    class="bg-blue-400 hover:bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Align Bottom">
+                    ⬇️
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="deleteSelected()"
+                  class="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition text-sm">
+                  🗑️ Delete
+                </button>
+                <button onclick="bringToFront()"
+                  class="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition text-sm">
+                  ↑ Front
+                </button>
+                <button onclick="sendToBack()"
+                  class="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition text-sm">
+                  ↓ Back
+                </button>
+              </div>
+            </div>
+
+            <!-- Photo Preview Section -->
+            <div class="mt-6 pt-6 border-t">
+              <h4 class="font-semibold text-sm text-gray-700 mb-2">Photo System</h4>
+              <div class="space-y-3 text-sm">
+                <div>
+                  <label class="text-gray-600 block mb-1">Employee No:</label>
+                  <input type="text" id="photoEmployeeNo" placeholder="e.g., EMP001"
+                    class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 mb-2">Looks for: /uploads/photos/{employeeno}.jpg</p>
+                </div>
+                <div class="space-y-2">
+                  <input id="photoUploadInput" type="file" accept="image/*" class="w-full text-xs"
+                    onchange="handlePhotoInputChange(event)">
+                  <button onclick="loadPhotoPreview()"
+                    class="w-full bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-xs">
+                    👁️ Preview
+                  </button>
+                  <button onclick="addPhoto()"
+                    class="w-full bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-xs">
+                    ➕ Add & Fit Photo
+                  </button>
+                </div>
+                <div id="photoPreview"
+                  class="mt-2 bg-gray-100 rounded border border-gray-300 p-2 text-center text-xs text-gray-600"
+                  style="height: 100px; display: flex; align-items: center; justify-content: center;">
+                  Photo preview
+                </div>
+              </div>
+            </div>
+
+            <!-- Canvas Settings -->
+            <div class="mt-6 pt-6 border-t">
+              <h4 class="font-semibold text-sm text-gray-700 mb-3">Canvas Settings</h4>
+              <div class="space-y-3 text-sm">
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="text-gray-600 block mb-1 text-xs">Front Background:</label>
+                    <input type="color" id="frontBackgroundColor" value="#ffffff" onchange="updateFrontBackground()"
+                      class="color-picker">
+                  </div>
+                  <div>
+                    <label class="text-gray-600 block mb-1 text-xs">Back Background:</label>
+                    <input type="color" id="backBackgroundColor" value="#f0f0f0" onchange="updateBackBackground()"
+                      class="color-picker">
+                  </div>
+                </div>
+                <div>
+                  <label class="text-gray-600">Width:</label>
+                  <input type="number" id="canvasWidth" value="324" onchange="resizeCanvases()"
+                    class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div>
+                  <label class="text-gray-600">Height:</label>
+                  <input type="number" id="canvasHeight" value="204" onchange="resizeCanvases()"
+                    class="w-full px-2 py-1 border border-gray-300 rounded">
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="clearCanvas()"
+                    class="flex-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm">
+                    Clear Canvas
+                  </button>
+                  <button onclick="resetBackgroundColor()"
+                    class="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm">
+                    Reset Color
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barcode Information -->
+            <div class="mt-6 pt-6 border-t">
+              <h4 class="font-semibold text-sm text-gray-700 mb-2">ℹ️ Barcode Guide</h4>
+              <div class="bg-blue-50 p-3 rounded text-xs text-gray-700 space-y-2">
+                <p><strong>📌 Adding Barcodes:</strong></p>
+                <p>Drag & drop the <strong>"🆔 Promoter ID"</strong> field from the left panel → barcode will
+                  automatically generate on canvas</p>
+                <p><strong>📊 Barcode Format:</strong> CODE 128</p>
+                <p><strong>🎨 Customizable:</strong> Resize, move, and delete like any other element</p>
+                <p><strong>🔄 Batch Processing:</strong> Each promoter's unique ID will be encoded automatically</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Load Template Modal -->
+    <div id="loadTemplateModal" class="modal-overlay">
+      <div class="modal-content overflow-hidden flex flex-col max-h-[85vh]">
+        <div
+          class="flex justify-between items-center p-6 bg-gradient-to-r from-purple-600 to-indigo-700 text-white shadow-lg">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📂</span>
+            <h3 class="text-2xl font-bold tracking-tight">Load Template</h3>
+          </div>
+          <button onclick="closeLoadTemplateModal()"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-8 overflow-y-auto bg-gray-50 flex-1">
+          <div id="templatesList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Templates will be loaded here -->
+          </div>
+        </div>
+
+        <div class="p-6 bg-white border-t border-gray-100 flex justify-end">
+          <button onclick="closeLoadTemplateModal()"
+            class="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl transition-all">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    let frontCanvas, backCanvas;
+    let currentCanvas = 'front';
+    let canvases = { front: null, back: null };
+    let draggedFieldData = null;
+
+    // Initialize canvases
+    document.addEventListener('DOMContentLoaded', () => {
+      frontCanvas = new fabric.Canvas('frontCanvas', {
+        isDrawingMode: false,
+        selection: true,
+        backgroundColor: '#ffffff',
+        preserveObjectStacking: true,
+        stopContextMenu: true
+      });
+
+      backCanvas = new fabric.Canvas('backCanvas', {
+        isDrawingMode: false,
+        selection: true,
+        backgroundColor: '#f0f0f0',
+        preserveObjectStacking: true,
+        stopContextMenu: true
+      });
+
+      canvases.front = frontCanvas;
+      canvases.back = backCanvas;
+
+      // Setup event handlers for both canvases
+      setupCanvasEvents(frontCanvas, 'front');
+      setupCanvasEvents(backCanvas, 'back');
+
+      updateCanvasActiveState();
+    });
+
+    // Setup all events for a canvas
+    function setupCanvasEvents(canvas, side) {
+      // Selection events
+      canvas.on('selection:created', () => {
+        currentCanvas = side;
+        showProperties();
+        updateCanvasActiveState();
+      });
+      canvas.on('selection:updated', () => {
+        currentCanvas = side;
+        showProperties();
+        updateCanvasActiveState();
+      });
+      canvas.on('selection:cleared', () => {
+        hideProperties();
+      });
+
+      // Object modification events
+      canvas.on('object:moved', () => canvas.renderAll());
+      canvas.on('object:scaled', () => canvas.renderAll());
+      canvas.on('object:rotated', () => canvas.renderAll());
+      canvas.on('object:modified', () => canvas.renderAll());
+
+      // Mouse events to track active canvas
+      canvas.on('mouse:down', (e) => {
+        currentCanvas = side;
+        updateCanvasActiveState();
+        updateBackgroundColorDisplay();
+      });
+
+      canvas.on('mouse:over', () => {
+        currentCanvas = side;
+      });
+
+      // Context menu handler
+      const canvasElement = document.getElementById(side + 'Canvas');
+      canvasElement.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        currentCanvas = side;
+        const pointer = canvas.getPointer(e);
+        const obj = canvas.findObject(pointer);
+        if (obj) {
+          canvas.setActiveObject(obj);
+          canvas.renderAll();
+          showContextMenu(e, canvas);
+        }
+      });
+    }
+
+    // Update visual state of canvases
+    function updateCanvasActiveState() {
+      const frontCanvasEl = document.getElementById('frontCanvas');
+      const backCanvasEl = document.getElementById('backCanvas');
+
+      if (currentCanvas === 'front') {
+        frontCanvasEl.classList.add('active-canvas');
+        backCanvasEl.classList.remove('active-canvas');
+      } else {
+        frontCanvasEl.classList.remove('active-canvas');
+        backCanvasEl.classList.add('active-canvas');
+      }
+    }
+
+    // Global keyboard handler for DEL key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const activeCanvas = getFocusedCanvas();
+        if (activeCanvas && activeCanvas.getActiveObject()) {
+          e.preventDefault();
+          deleteSelected();
+        }
+      }
+    });
+
+    // Drag field data
+    function dragField(fieldText, event) {
+      draggedFieldData = fieldText;
+      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.setData('text/plain', fieldText);
+    }
+
+    // Handle drag over
+    function handleDragOver(event) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+      event.target.style.opacity = '0.7';
+    }
+
+    // Handle drag leave
+    function handleDragLeave(event) {
+      event.target.style.opacity = '1';
+    }
+
+    // Handle drop
+    function handleDrop(event, side) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Reset opacity
+      const dropZones = document.querySelectorAll('[ondrop]');
+      dropZones.forEach(el => {
+        if (el.parentElement) el.parentElement.style.opacity = '1';
+      });
+
+      const fieldText = event.dataTransfer.getData('text/plain') || draggedFieldData;
+      if (fieldText) {
+        // Set current canvas before adding field
+        currentCanvas = side;
+        updateCanvasActiveState();
+
+        // Get canvas and calculate position relative to canvas
+        const canvas = side === 'front' ? frontCanvas : backCanvas;
+        const canvasElement = document.getElementById(side + 'Canvas');
+
+        if (!canvasElement) return;
+
+        const rect = canvasElement.getBoundingClientRect();
+
+        // Calculate position relative to canvas
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+
+        // Account for canvas scaling/transformation
+        x = x / (rect.width / canvas.width);
+        y = y / (rect.height / canvas.height);
+
+        // Ensure position is within canvas bounds
+        const posX = Math.min(Math.max(x, 0), canvas.width - 50);
+        const posY = Math.min(Math.max(y, 0), canvas.height - 30);
+
+        if (fieldText === '{{photo}}') {
+          addPhotoAtPosition(posX, posY);
+        } else {
+          addFieldAtPosition(fieldText, posX, posY);
+        }
+
+        // Clear drag session
+        draggedFieldData = null;
+      }
+    }
+
+    // Add field at specific position
+    function addFieldAtPosition(fieldText, x, y) {
+      const canvas = canvases[currentCanvas];
+
+      // Check if this is a promoter_id field - generate barcode instead
+      if (fieldText === '[promoter_id]') {
+        addBarcodeField(canvas, x, y, 'PROMOTER-000');
+        return;
+      }
+
+      const text = new fabric.Text(fieldText, {
+        left: x,
+        top: y,
+        fontSize: 14,
+        fontFamily: 'Arial',
+        fill: '#000000',
+        editable: true,
+        padding: 5,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        perPixelTargetFind: true,
+        hoverCursor: 'move'
+      });
+
+      canvas.add(text);
+      canvas.setActiveObject(text);
+      canvas.renderAll();
+      showProperties();
+    }
+
+    const PHOTO_CONTAINER_SIZE = 120;
+
+    function addPhotoAtPosition(x, y, imageUrl = null) {
+      const canvas = canvases[currentCanvas];
+      if (!canvas) return;
+
+      const containerCenterX = Math.round(x);
+      const containerCenterY = Math.round(y);
+
+      const container = new fabric.Rect({
+        left: containerCenterX,
+        top: containerCenterY,
+        width: PHOTO_CONTAINER_SIZE,
+        height: PHOTO_CONTAINER_SIZE,
+        originX: 'center',
+        originY: 'center',
+        fill: 'transparent',
+        stroke: '#ffffff',
+        strokeWidth: 2,
+        rx: PHOTO_CONTAINER_SIZE / 2,
+        ry: PHOTO_CONTAINER_SIZE / 2,
+        selectable: false,
+        evented: false
+      });
+
+      if (!imageUrl) {
+        // Add placeholder when no image URL provided
+        const placeholder = new fabric.Text('No Image', {
+          left: containerCenterX,
+          top: containerCenterY,
+          originX: 'center',
+          originY: 'center',
+          fontSize: 14,
+          fill: '#666',
+          selectable: false,
+          evented: false
+        });
+
+        canvas.add(container, placeholder);
+        canvas.renderAll();
+        return;
+      }
+
+      fabric.Image.fromURL(imageUrl, (img) => {
+        const scale = Math.max(PHOTO_CONTAINER_SIZE / img.width, PHOTO_CONTAINER_SIZE / img.height);
+
+        img.set({
+          scaleX: scale,
+          scaleY: scale,
+          originX: 'center',
+          originY: 'center',
+          left: containerCenterX,
+          top: containerCenterY,
+          selectable: false,
+          evented: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true
+        });
+
+        const clip = new fabric.Circle({
+          radius: PHOTO_CONTAINER_SIZE / 2,
+          originX: 'center',
+          originY: 'center',
+          left: containerCenterX,
+          top: containerCenterY,
+          selectable: false,
+          evented: false
+        });
+
+        img.set('clipPath', clip);
+
+        // Add in order: photo container border, photo image
+        canvas.add(container);
+        canvas.add(img);
+
+        // Ensure on top
+        img.bringToFront();
+
+        canvas.renderAll();
+      }, { crossOrigin: 'anonymous' });
+    }
+
+    function addPhotoToCanvasFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const url = e.target.result;
+        const x = PHOTO_CONTAINER_SIZE + 30;
+        const y = PHOTO_CONTAINER_SIZE + 30;
+        addPhotoAtPosition(x, y, url);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handlePhotoInputChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        addPhotoToCanvasFromFile(file);
+      }
+    }
+
+    function addPhotoPlaceholder() {
+      const canvas = canvases[currentCanvas];
+      if (!canvas) return;
+      const x = PHOTO_CONTAINER_SIZE + 30;
+      const y = PHOTO_CONTAINER_SIZE + 30;
+      addPhotoAtPosition(x, y, null);
+    }
+
+    function addPhoto() {
+      const fileInput = document.getElementById('photoUploadInput');
+      if (fileInput && fileInput.files.length > 0) {
+        addPhotoToCanvasFromFile(fileInput.files[0]);
+      } else {
+        addPhotoPlaceholder();
+      }
+    }
+
+    // Context menu
+    function showContextMenu(event, canvas) {
+      const active = canvas.getActiveObject();
+      if (active) {
+        // Create a simple context menu
+        const menu = document.createElement('div');
+        menu.className = 'fixed bg-white border border-gray-300 rounded shadow-lg z-50 text-sm';
+        menu.style.top = event.clientY + 'px';
+        menu.style.left = event.clientX + 'px';
+        menu.innerHTML = `
+          <button onclick="deleteSelected(); hideContextMenu();" class="block w-full text-left px-4 py-2 hover:bg-red-100 text-red-600 border-b">
+            🗑️ Delete
+          </button>
+          <button onclick="bringToFront(); hideContextMenu();" class="block w-full text-left px-4 py-2 hover:bg-gray-100 border-b">
+            ↑ Bring to Front
+          </button>
+          <button onclick="sendToBack(); hideContextMenu();" class="block w-full text-left px-4 py-2 hover:bg-gray-100">
+            ↓ Send to Back
+          </button>
+        `;
+        document.body.appendChild(menu);
+        menu.id = 'contextMenu';
+
+        // Close menu on click outside
+        setTimeout(() => {
+          document.addEventListener('click', hideContextMenu, { once: true });
+        }, 100);
+      }
+    }
+
+    function hideContextMenu() {
+      const menu = document.getElementById('contextMenu');
+      if (menu) menu.remove();
+    }
+
+    // Add text field to current canvas
+    function addField(fieldText) {
+      const canvas = canvases[currentCanvas];
+
+      // Check if this is a promoter_id field - generate barcode instead
+      if (fieldText === '[promoter_id]') {
+        addBarcodeField(canvas, Math.random() * 200 + 50, Math.random() * 100 + 30, 'PROMOTER-000');
+        return;
+      }
+
+      const text = new fabric.Text(fieldText, {
+        left: Math.random() * 200 + 50,
+        top: Math.random() * 100 + 30,
+        fontSize: 16,
+        fontFamily: 'Arial',
+        fill: '#000000',
+        editable: true,
+        padding: 5,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        perPixelTargetFind: true,
+        hoverCursor: 'move'
+      });
+
+      canvas.add(text);
+      canvas.setActiveObject(text);
+      canvas.renderAll();
+      showProperties();
+    }
+
+    // Add text label
+    function addText() {
+      const canvas = canvases[currentCanvas];
+      const text = new fabric.Text('Label', {
+        left: Math.random() * 200 + 50,
+        top: Math.random() * 100 + 30,
+        fontSize: 16,
+        fontFamily: 'Arial',
+        fill: '#000000',
+        editable: true,
+        padding: 5,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        perPixelTargetFind: true,
+        hoverCursor: 'move'
+      });
+
+      canvas.add(text);
+      canvas.setActiveObject(text);
+      canvas.renderAll();
+      showProperties();
+      // Automatically show the text input for editing
+      setTimeout(() => {
+        document.getElementById('objectText').focus();
+        document.getElementById('objectText').select();
+      }, 100);
+    }
+
+    // Add line
+    function addLine() {
+      const canvas = canvases[currentCanvas];
+      const line = new fabric.Line([50, 50], [200, 80], {
+        stroke: '#000000',
+        strokeWidth: 2,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        scalable: true,
+        perPixelTargetFind: true,
+        hoverCursor: 'move'
+      });
+
+      canvas.add(line);
+      canvas.setActiveObject(line);
+      canvas.renderAll();
+      showProperties();
+    }
+
+    // Add rectangle
+    function addRectangle() {
+      const canvas = canvases[currentCanvas];
+      const rect = new fabric.Rect({
+        left: 50,
+        top: 50,
+        width: 150,
+        height: 100,
+        fill: 'transparent',
+        stroke: '#000000',
+        strokeWidth: 2,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        scalable: true,
+        perPixelTargetFind: true,
+        hoverCursor: 'move'
+      });
+
+      canvas.add(rect);
+      canvas.setActiveObject(rect);
+      canvas.renderAll();
+      showProperties();
+    }
+
+    // Add circle
+    function addCircle() {
+      const canvas = canvases[currentCanvas];
+      const circle = new fabric.Circle({
+        left: 50,
+        top: 50,
+        radius: 50,
+        fill: 'transparent',
+        stroke: '#000000',
+        strokeWidth: 2,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        scalable: true,
+        perPixelTargetFind: true,
+        hoverCursor: 'move'
+      });
+
+      canvas.add(circle);
+      canvas.setActiveObject(circle);
+      canvas.renderAll();
+      showProperties();
+    }
+
+    // Add photo placeholder ({{photo}} tag for batch processing)
+    function addPhoto() {
+      addPhotoPlaceholder();
+    }
+
+    // Add photo placeholder to canvas
+    function addPhotoPlaceholder() {
+      const canvas = canvases[currentCanvas];
+      const rect = new fabric.Rect({
+        left: 50,
+        top: 50,
+        width: 100,
+        height: 120,
+        fill: '#e0e0e0',
+        stroke: '#999999',
+        strokeWidth: 2,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        perPixelTargetFind: true,
+        hoverCursor: 'move',
+        photoPlaceholder: true
+      });
+
+      const text = new fabric.Text('{{photo}}', {
+        left: 50,
+        top: 105,
+        fontSize: 12,
+        fontFamily: 'Arial',
+        fill: '#666666',
+        textAlign: 'center',
+        selectable: false,
+        evented: false
+      });
+
+      canvas.add(rect);
+      canvas.add(text);
+      canvas.setActiveObject(rect);
+      canvas.renderAll();
+      showProperties();
+    }
+
+    // Load photo preview
+    function loadPhotoPreview() {
+      const employeeno = document.getElementById('photoEmployeeNo').value.trim();
+      if (!employeeno) {
+        alert('Please enter an employee number');
+        return;
+      }
+
+      fetch(`/api/photos/${employeeno}/base64`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = `<img src="${data.photo}" style="max-height: 100%; max-width: 100%; object-fit: contain;">`;
+          } else {
+            alert('Photo not found for employee: ' + employeeno);
+          }
+        })
+        .catch(err => alert('Error loading photo: ' + err.message));
+    }
+
+    // Load photo to canvas from employee
+    function loadPhotoToCanvas(employeeno) {
+      const canvas = canvases[currentCanvas];
+      fetch(`/api/photos/${employeeno}/base64`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            fabric.Image.fromURL(data.photo, (img) => {
+              img.set({
+                left: 150,
+                top: 100,
+                width: 100,
+                height: 120,
+                selectable: true,
+                photoPlaceholder: true,
+                employeeNo: employeeno
+              });
+              canvas.add(img);
+              canvas.setActiveObject(img);
+              canvas.renderAll();
+            });
+          }
+        })
+        .catch(err => console.error('Error loading photo:', err));
+    }
+
+    // Add barcode field
+    function addBarcodeField(canvas, x, y, barcodeValue = 'PROMOTER-000') {
+      // Create SVG canvas for barcode
+      const svgCanvas = document.createElement('canvas');
+      svgCanvas.width = 200;
+      svgCanvas.height = 80;
+
+      // Generate barcode SVG
+      JsBarcode(svgCanvas, barcodeValue, {
+        format: 'CODE128',
+        width: 2,
+        height: 50,
+        displayValue: true,
+        fontSize: 12,
+        margin: 5
+      });
+
+      // Convert canvas to image
+      const imageUrl = svgCanvas.toDataURL('image/png');
+
+      // Add barcode image to fabric canvas
+      fabric.Image.fromURL(imageUrl, (img) => {
+        img.set({
+          left: x,
+          top: y,
+          width: 150,
+          height: 60,
+          selectable: true,
+          hasControls: true,
+          hasBorders: true,
+          perPixelTargetFind: true,
+          hoverCursor: 'move',
+          isBarcode: true,
+          barcodeValue: barcodeValue
+        });
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+        showProperties();
+      });
+    }
+
+    // Generate barcode for ID generation (with actual promoter_id)
+    function generateBarcodeForPromoter(promoterId) {
+      const svgCanvas = document.createElement('canvas');
+      svgCanvas.width = 200;
+      svgCanvas.height = 80;
+
+      JsBarcode(svgCanvas, promoterId, {
+        format: 'CODE128',
+        width: 2,
+        height: 50,
+        displayValue: true,
+        fontSize: 12,
+        margin: 5
+      });
+
+      return svgCanvas.toDataURL('image/png');
+    }
+
+    // Show properties panel
+    function showProperties() {
+      const active = getFocusedCanvas().getActiveObject();
+      if (!active) {
+        hideProperties();
+        return;
+      }
+
+      document.getElementById('noSelection').classList.add('hidden');
+      document.getElementById('selectionProperties').classList.remove('hidden');
+
+      // Get element properties with fallbacks
+      const fontSize = active.fontSize || 20;
+      const fontFamily = active.fontFamily || 'Arial';
+      const color = active.fill && typeof active.fill === 'string' ? active.fill : '#000000';
+      const fillColor = (active.fill && typeof active.fill === 'string' ? active.fill : '#ffffff');
+      const strokeColor = active.stroke || '#000000';
+      const strokeWidthValue = active.strokeWidth || 2;
+      const opacity = (active.opacity !== undefined) ? active.opacity : 1;
+      const text = active.text || '';
+      const angle = active.angle || 0;
+
+      // Update property inputs
+      document.getElementById('fontSize').value = fontSize;
+      document.getElementById('fontSizeValue').textContent = fontSize + 'px';
+      document.getElementById('fontFamily').value = fontFamily;
+      document.getElementById('objectColor').value = color;
+      document.getElementById('objectFill').value = fillColor;
+      document.getElementById('objectStroke').value = strokeColor;
+      document.getElementById('strokeWidth').value = strokeWidthValue;
+      document.getElementById('strokeWidthValue').textContent = strokeWidthValue + 'px';
+      document.getElementById('objectOpacity').value = opacity;
+      document.getElementById('objectText').value = text;
+      document.getElementById('objectRotate').value = angle;
+      document.getElementById('rotateValue').textContent = angle + '°';
+    }
+
+    // Hide properties panel
+    function hideProperties() {
+      document.getElementById('noSelection').classList.remove('hidden');
+      document.getElementById('selectionProperties').classList.add('hidden');
+    }
+
+    // Update selected object
+    function updateSelected() {
+      const canvas = getFocusedCanvas();
+      const active = canvas.getActiveObject();
+      if (!active) return;
+
+      const fontSize = parseInt(document.getElementById('fontSize').value) || 20;
+      const angle = parseInt(document.getElementById('objectRotate').value) || 0;
+      const strokeWidthValue = parseInt(document.getElementById('strokeWidth').value) || 2;
+      const opacity = parseFloat(document.getElementById('objectOpacity').value) || 1;
+
+      // Update active object properties
+      if (active.fontSize !== undefined) active.fontSize = fontSize;
+      if (active.fontFamily !== undefined) active.fontFamily = document.getElementById('fontFamily').value;
+      active.fill = document.getElementById('objectColor').value;
+      active.stroke = document.getElementById('objectStroke').value;
+      active.strokeWidth = strokeWidthValue;
+      active.opacity = opacity;
+      if (active.text !== undefined) active.text = document.getElementById('objectText').value;
+      active.angle = angle;
+
+      // Update display values
+      document.getElementById('fontSizeValue').textContent = fontSize + 'px';
+      document.getElementById('rotateValue').textContent = angle + '°';
+      document.getElementById('strokeWidthValue').textContent = strokeWidthValue + 'px';
+
+      canvas.renderAll();
+    }
+
+    // Delete selected object
+    function deleteSelected() {
+      const canvas = getFocusedCanvas();
+      if (!canvas) return;
+
+      const active = canvas.getActiveObject();
+      if (active) {
+        // Remove the object and related objects (like photo text label)
+        canvas.remove(active);
+
+        // If this is a photo placeholder rect, also remove its text label
+        if (active.photoPlaceholder) {
+          const objects = canvas.getObjects();
+          objects.forEach(obj => {
+            if (obj.text && obj.text === '{{photo}}' && !obj.selectable) {
+              canvas.remove(obj);
+            }
+          });
+        }
+
+        canvas.renderAll();
+        hideProperties();
+      }
+    }
+
+    // Bring to front
+    function bringToFront() {
+      const canvas = getFocusedCanvas();
+      const active = canvas.getActiveObject();
+      if (active) {
+        canvas.bringToFront(active);
+        canvas.renderAll();
+      }
+    }
+
+    // Send to back
+    function sendToBack() {
+      const canvas = getFocusedCanvas();
+      const active = canvas.getActiveObject();
+      if (active) {
+        canvas.sendToBack(active);
+        canvas.renderAll();
+      }
+    }
+
+    // Align elements
+    function alignElement(alignment) {
+      const canvas = getFocusedCanvas();
+      const active = canvas.getActiveObject();
+      if (!active) {
+        alert('Please select an element first');
+        return;
+      }
+
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const objWidth = active.width * (active.scaleX || 1);
+      const objHeight = active.height * (active.scaleY || 1);
+
+      switch (alignment) {
+        case 'left':
+          active.set({ left: 0 });
+          break;
+        case 'center':
+          active.set({ left: (canvasWidth - objWidth) / 2 });
+          break;
+        case 'right':
+          active.set({ left: canvasWidth - objWidth });
+          break;
+        case 'top':
+          active.set({ top: 0 });
+          break;
+        case 'middle':
+          active.set({ top: (canvasHeight - objHeight) / 2 });
+          break;
+        case 'bottom':
+          active.set({ top: canvasHeight - objHeight });
+          break;
+      }
+
+      canvas.renderAll();
+    }
+
+    // Clear canvas
+    function clearCanvas() {
+      if (confirm('Clear current canvas? This cannot be undone.')) {
+        const canvas = getFocusedCanvas();
+        canvas.clear();
+        hideProperties();
+      }
+    }
+
+    // Resize canvases
+    function resizeCanvases() {
+      const widthValue = parseFloat(document.getElementById('canvasWidth').value);
+      const heightValue = parseFloat(document.getElementById('canvasHeight').value);
+      const unit = document.getElementById('canvasUnit').value || 'px';
+
+      if (isNaN(widthValue) || isNaN(heightValue) || widthValue <= 0 || heightValue <= 0) {
+        return;
+      }
+
+      const width = Math.max(320, Math.round(convertToPx(widthValue, unit)));
+      const height = Math.max(204, Math.round(convertToPx(heightValue, unit)));
+
+      frontCanvas.setWidth(width);
+      frontCanvas.setHeight(height);
+      backCanvas.setWidth(width);
+      backCanvas.setHeight(height);
+
+      const frontEl = document.getElementById('frontCanvas');
+      const backEl = document.getElementById('backCanvas');
+      frontEl.width = width;
+      frontEl.height = height;
+      backEl.width = width;
+      backEl.height = height;
+      frontEl.style.width = width + 'px';
+      frontEl.style.height = height + 'px';
+      backEl.style.width = width + 'px';
+      backEl.style.height = height + 'px';
+
+      frontCanvas.renderAll();
+      backCanvas.renderAll();
+    }
+
+    // Hanes/Samsung preset
+    function applyHanesSamsungPreset() {
+      if (!confirm('Apply Hanes/Samsung template? This will replace current design.')) return;
+
+      const width = 648;
+      const height = 408;
+
+      // Resize paint surface
+      document.getElementById('canvasWidth').value = width;
+      document.getElementById('canvasHeight').value = height;
+      document.getElementById('canvasUnit').value = 'px';
+      resizeCanvases();
+
+      // Reset canvases
+      frontCanvas.clear();
+      backCanvas.clear();
+      hideProperties();
+
+      frontCanvas.setBackgroundColor('#FFEB00', () => { });
+      backCanvas.setBackgroundColor('#FFEB00', () => { });
+
+      // Front elements
+      const faceCircle = new fabric.Circle({
+        left: 28,
+        top: 24,
+        radius: 92,
+        fill: '#ffffff',
+        stroke: '#0A1CFF',
+        strokeWidth: 4,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true,
+        name: 'photoCircle',
+        data: 'photo'
+      });
+
+      const controlLabel = new fabric.Rect({
+        left: 498,
+        top: 24,
+        width: 130,
+        height: 58,
+        fill: '#ffffff',
+        stroke: '#0A1CFF',
+        strokeWidth: 2,
+        rx: 10,
+        ry: 10,
+        selectable: false,
+        evented: false
+      });
+
+      const controlText = new fabric.Text('Control No:\n[control_no]', {
+        left: 508,
+        top: 33,
+        fontSize: 18,
+        fill: '#0A1CFF',
+        fontWeight: 'bold',
+        lineHeight: 1.1,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      const heroName = new fabric.Text('[full_name]', {
+        left: 220,
+        top: 30,
+        fontSize: 56,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      const brandName = new fabric.Text('[brand]', {
+        left: 220,
+        top: 95,
+        fontSize: 52,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      const roleText = new fabric.Text('[position]', {
+        left: 220,
+        top: 155,
+        fontSize: 36,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      frontCanvas.add(faceCircle, controlLabel, controlText, heroName, brandName, roleText);
+      frontCanvas.requestRenderAll();
+
+      // Back elements
+      const gateText = new fabric.Text('GATE PASS', {
+        left: width / 2,
+        top: 14,
+        originX: 'center',
+        fontSize: 58,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: false,
+        evented: false
+      });
+
+      const borderRect = new fabric.Rect({
+        left: 18,
+        top: 80,
+        width: width - 36,
+        height: 276,
+        fill: '#ffffff',
+        stroke: '#0A1CFF',
+        strokeWidth: 2,
+        rx: 12,
+        ry: 12,
+        selectable: false,
+        evented: false
+      });
+
+      const barcodePlaceholder = new fabric.Rect({
+        left: 24,
+        top: 100,
+        width: 345,
+        height: 135,
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeWidth: 2,
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+      barcodePlaceholder._barcode = true;
+      barcodePlaceholder._promoter_id = true;
+      barcodePlaceholder.data = 'barcode';
+
+      const employerBox = new fabric.Text('EMPLOYER:\n[employer]', {
+        left: 380,
+        top: 96,
+        fontSize: 22,
+        fontWeight: 'bold',
+        fill: '#000',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      const locationBox = new fabric.Text('LOCATION:\n[location]', {
+        left: 510,
+        top: 96,
+        fontSize: 22,
+        fontWeight: 'bold',
+        fill: '#000',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      const positionBox = new fabric.Text('POSITION:\n[position]', {
+        left: 380,
+        top: 164,
+        fontSize: 22,
+        fontWeight: 'bold',
+        fill: '#000',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      const expiryBox = new fabric.Text('DATE EXPIRED:\n[date_expired]', {
+        left: 510,
+        top: 164,
+        fontSize: 22,
+        fontWeight: 'bold',
+        fill: '#000',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        evented: true
+      });
+
+      const suggBox = new fabric.Text('In case of emergency,\nplease notify\n[contact_person]\n[emergency_contact]', {
+        left: 380,
+        top: 235,
+        fontSize: 24,
+        fontWeight: 'bold',
+        fill: '#000',
+        textAlign: 'center',
+        selectable: false,
+        evented: false
+      });
+
+      backCanvas.add(gateText, borderRect, barcodePlaceholder, employerBox, locationBox, positionBox, expiryBox, suggBox);
+      backCanvas.requestRenderAll();
+    }
+
+    // Get focused canvas
+    function getFocusedCanvas() {
+      return currentCanvas === 'front' ? frontCanvas : backCanvas;
+    }
+
+    // Save template
+    async function saveTemplate() {
+      const templateName = document.getElementById('templateNameInput').value.trim();
+      if (!templateName) {
+        alert('Please enter a template name');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            template_name: templateName,
+            front_canvas_json: JSON.stringify(frontCanvas.toJSON()),
+            back_canvas_json: JSON.stringify(backCanvas.toJSON()),
+            width: frontCanvas.width,
+            height: frontCanvas.height
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('Template saved successfully!');
+          document.getElementById('templateNameInput').value = '';
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Error saving template: ' + error.message);
+      }
+    }
+
+    // Load template modal
+    async function loadTemplateModal() {
+      try {
+        const response = await fetch('/api/templates');
+        const result = await response.json();
+
+        if (result.success && result.templates) {
+          const html = result.templates.map(t => `
+            <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+              onclick="loadTemplate(${t.id})">
+              <div class="font-semibold">${t.template_name}</div>
+              <div class="text-xs text-gray-500">${t.created_at}</div>
+            </div>
+          `).join('');
+
+          document.getElementById('templatesList').innerHTML = html;
+          document.getElementById('loadTemplateModal').classList.add('active');
+        }
+      } catch (error) {
+        alert('Error loading templates: ' + error.message);
+      }
+    }
+
+    // Load template
+    async function loadTemplate(templateId) {
+      try {
+        const response = await fetch(`/api/templates/${templateId}`);
+        const result = await response.json();
+
+        if (result.success && result.template) {
+          const template = result.template;
+
+          // Clear canvases
+          frontCanvas.clear();
+          backCanvas.clear();
+
+          // Load front canvas
+          if (template.front_canvas_json) {
+            const frontData = JSON.parse(template.front_canvas_json);
+            frontCanvas.loadFromJSON(frontData, () => {
+              frontCanvas.renderAll();
+            });
+          }
+
+          // Load back canvas
+          if (template.back_canvas_json) {
+            const backData = JSON.parse(template.back_canvas_json);
+            backCanvas.loadFromJSON(backData, () => {
+              backCanvas.renderAll();
+            });
+          }
+
+          closeLoadTemplateModal();
+          alert('Template loaded successfully!');
+        }
+      } catch (error) {
+        alert('Error loading template: ' + error.message);
+      }
+    }
+
+    // Close load template modal
+    function closeLoadTemplateModal() {
+      document.getElementById('loadTemplateModal').classList.remove('active');
+    }
+
+    function applyHanesSamsungPreset() {
+      if (!confirm('Apply Hanes/Samsung gate-pass template? This will overwrite current design.')) return;
+
+      // setup colors and cleanup
+      frontCanvas.clear();
+      backCanvas.clear();
+      frontCanvas.setBackgroundColor('#FFEB00', () => frontCanvas.renderAll());
+      backCanvas.setBackgroundColor('#FFEB00', () => backCanvas.renderAll());
+      hideProperties();
+
+      // Front panel: photo circle
+      const photoCircle = new fabric.Circle({
+        left: 20,
+        top: 24,
+        radius: 70,
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeWidth: 1,
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        evented: true,
+        name: 'photoCircle'
+      });
+
+      const nameTitle = new fabric.Text('[full_name]', {
+        left: 160,
+        top: 30,
+        fontSize: 42,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: true,
+        hasBorders: false,
+        hasControls: true,
+        evented: true
+      });
+
+      const nameSub = new fabric.Text('[full_name]', {
+        left: 160,
+        top: 80,
+        fontSize: 24,
+        fill: '#0A1CFF',
+        selectable: true,
+        hasBorders: false,
+        hasControls: true,
+        evented: true
+      });
+
+      const brandText = new fabric.Text('[brand]', {
+        left: 160,
+        top: 120,
+        fontSize: 44,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: true,
+        hasBorders: false,
+        hasControls: true,
+        evented: true
+      });
+
+      const roleText = new fabric.Text('[position]', {
+        left: 160,
+        top: 170,
+        fontSize: 26,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: true,
+        hasBorders: false,
+        hasControls: true,
+        evented: true
+      });
+
+      const controlLabel = new fabric.Text('Control No.:', {
+        left: 160,
+        top: 220,
+        fontSize: 14,
+        fill: '#0A1CFF',
+        fontWeight: 'bold',
+        selectable: true,
+        hasBorders: false,
+        hasControls: true,
+        evented: true
+      });
+
+      const controlValue = new fabric.Text('[control_no]', {
+        left: 260,
+        top: 215,
+        fontSize: 34,
+        fill: '#0A1CFF',
+        fontWeight: 'bold',
+        selectable: true,
+        hasBorders: false,
+        hasControls: true,
+        evented: true
+      });
+
+      frontCanvas.add(photoCircle, nameTitle, nameSub, brandText, roleText, controlLabel, controlValue);
+      frontCanvas.requestRenderAll();
+
+      // Back panel: Gate pass details
+      const gatePassLabel = new fabric.Text('GATE PASS', {
+        left: 20,
+        top: 20,
+        fontSize: 48,
+        fontWeight: 'bold',
+        fill: '#0A1CFF',
+        selectable: true,
+        hasBorders: false,
+        hasControls: true,
+        evented: true
+      });
+      const employer = new fabric.Text('EMPLOYER:\n[employer]', {
+        left: 20,
+        top: 90,
+        fontSize: 20,
+        fill: '#000',
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        evented: true
+      });
+      const location = new fabric.Text('LOCATION:\n[location]', {
+        left: 240,
+        top: 90,
+        fontSize: 20,
+        fill: '#000',
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        evented: true
+      });
+      const position = new fabric.Text('POSITION:\n[position]', {
+        left: 20,
+        top: 170,
+        fontSize: 20,
+        fill: '#000',
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        evented: true
+      });
+      const expiry = new fabric.Text('DATE EXPIRED:\n[date_expired]', {
+        left: 240,
+        top: 170,
+        fontSize: 20,
+        fill: '#000',
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        evented: true
+      });
+      const emergency = new fabric.Text('In case of emergency, please notify\n[contact_person]\n[emergency_contact]', {
+        left: 20,
+        top: 260,
+        fontSize: 22,
+        fill: '#000',
+        textAlign: 'center',
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        evented: true
+      });
+
+      const gateBarcode = new fabric.Rect({
+        left: 20,
+        top: 350,
+        width: 280,
+        height: 100,
+        fill: '#fff',
+        stroke: '#000',
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+        evented: true
+      });
+
+      backCanvas.add(gatePassLabel, employer, location, position, expiry, emergency, gateBarcode);
+      backCanvas.requestRenderAll();
+    }
+
+    // New template
+    function newTemplate() {
+
+      document.addEventListener('click', (e) => {
+        const modal = document.getElementById('loadTemplateModal');
+        if (e.target === modal) closeLoadTemplateModal();
+      });
+
+      // Update canvas background color
+      function updateFrontBackground() {
+        const color = document.getElementById('frontBackgroundColor').value;
+        frontCanvas.setBackgroundColor(color, () => {
+          frontCanvas.renderAll();
+        });
+      }
+
+      function updateBackBackground() {
+        const color = document.getElementById('backBackgroundColor').value;
+        backCanvas.setBackgroundColor(color, () => {
+          backCanvas.renderAll();
+        });
+      }
+
+      // Update background color display
+      function updateBackgroundColorDisplay() {
+        // Legacy function - no longer used with separate controls
+      }
+
+      // Reset background to white
+      function resetBackgroundColor() {
+        document.getElementById('frontBackgroundColor').value = '#ffffff';
+        document.getElementById('backBackgroundColor').value = '#f0f0f0';
+        updateFrontBackground();
+        updateBackBackground();
+      }
+    }
+  </script>
+</body>
+
+</html>

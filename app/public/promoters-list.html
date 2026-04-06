@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promoters List - HR Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+  <style>
+    .table-container {
+      max-height: 600px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+
+    .table-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 20px;
+    }
+
+    .table-row:hover {
+      background-color: #f8fafc;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      z-index: 10;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      transform: scale(0.9) translateY(20px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      width: 100%;
+      max-width: 42rem;
+      /* 2xl */
+      margin: 1rem;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .modal-content-sm {
+      max-width: 24rem;
+      /* sm */
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 shadow-lg">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-4xl font-bold mb-2">Promoters List</h1>
+            <p class="text-blue-100">Browse, search, edit and manage all promoters</p>
+          </div>
+          <a href="/" class="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition">
+            ← Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8">
+      <div class="max-w-7xl mx-auto">
+
+        <!-- Filter Section -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h2 class="text-xl font-semibold mb-4">Filter & Search</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <input type="text" id="searchInput" placeholder="Search all..."
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onkeyup="applyFilters()">
+            <input type="text" id="nameFilter" placeholder="Filter by name..."
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onkeyup="applyFilters()">
+            <input type="text" id="promoterIdFilter" placeholder="Filter by ID..."
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onkeyup="applyFilters()">
+            <select id="brandFilter"
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onchange="applyFilters()">
+              <option value="">All Brands</option>
+            </select>
+            <select id="locationFilter"
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onchange="applyFilters()">
+              <option value="">All Locations</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="openAddModal()"
+              class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+              ➕ Add New Promoter
+            </button>
+            <button onclick="downloadImportTemplate()"
+              class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+              📥 Download Template
+            </button>
+            <button onclick="document.getElementById('fileInput').click()"
+              class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+              📤 Import Excel
+            </button>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" onchange="importFile(event)">
+            <button onclick="exportToExcel()"
+              class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+              📊 Export to Excel
+            </button>
+            <button onclick="loadPromoters()"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+              🔄 Refresh
+            </button>
+            <button onclick="deleteAllPromoters()"
+              class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+              🗑️ Delete All Records
+            </button>
+          </div>
+          <div class="text-gray-600">
+            Showing <span id="recordCount">0</span> of <span id="totalCount">0</span> records
+          </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <div class="table-container">
+            <table class="w-full">
+              <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Employee No</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Promoter ID</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Brand</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Location</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Contact</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Category</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Position</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Function</th>
+                  <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="promotersTable">
+                <tr>
+                  <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                    <div class="flex items-center justify-center gap-2">
+                      <span class="animate-spin">⏳</span> Loading promoters...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div id="promoterModal" class="modal-overlay">
+      <div class="modal-content bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+        <div class="flex justify-between items-center p-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">👤</span>
+            <h3 id="modalTitle" class="text-2xl font-bold tracking-tight">Add New Promoter</h3>
+          </div>
+          <button onclick="closeModal()"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-8 max-h-[70vh] overflow-y-auto">
+          <form id="promoterForm" class="space-y-6">
+            <input type="hidden" id="promoterId">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Employee No *</label>
+                <div class="relative group">
+                  <input type="text" id="employeeno" required
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all group-hover:bg-white"
+                    placeholder="E-001">
+                </div>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Promoter ID</label>
+                <input type="text" id="promoter_id"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="P-001">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">First Name *</label>
+                <input type="text" id="first_name" required
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="Juan">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Last Name *</label>
+                <input type="text" id="last_name" required
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="Dela Cruz">
+              </div>
+              <div class="md:col-span-2 space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Full Name</label>
+                <input type="text" id="full_name"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="Juan Dela Cruz">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Date Hired</label>
+                <input type="date" id="date_hired"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Date Expired</label>
+                <input type="date" id="date_expired"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Brand</label>
+                <input type="text" id="brand"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="OPPO">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Category</label>
+                <input type="text" id="category"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Position</label>
+                <input type="text" id="position"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Function</label>
+                <input type="text" id="function"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Employer</label>
+                <input type="text" id="employer"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Nickname</label>
+                <input type="text" id="nickname"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Contact No</label>
+                <input type="tel" id="contact_no"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="md:col-span-2 space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Address</label>
+                <input type="text" id="address"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Emergency Contact</label>
+                <input type="tel" id="emergency_contact"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Contact Person</label>
+                <input type="text" id="contact_person"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Location</label>
+                <input type="text" id="location"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">District</label>
+                <input type="text" id="district"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Division</label>
+                <input type="text" id="division"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">HR Gen</label>
+                <input type="text" id="hrgen"
+                  class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="flex justify-end items-center gap-4 p-6 bg-gray-50 border-t border-gray-100">
+          <button onclick="closeModal()"
+            class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-all">
+            Cancel
+          </button>
+          <button onclick="savePromoter()"
+            class="px-8 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95">
+            Save Records
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay">
+      <div class="modal-content modal-content-sm bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+        <div class="flex flex-col items-center text-center">
+          <div
+            class="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6 animate-pulse">
+            ⚠️
+          </div>
+          <h3 class="text-2xl font-black text-gray-800 mb-3 tracking-tight">Delete Promoter?</h3>
+          <p id="deleteMessage" class="text-gray-500 mb-8 leading-relaxed font-medium"></p>
+          <div class="grid grid-cols-2 gap-4 w-full">
+            <button onclick="closeDeleteModal()"
+              class="px-6 py-3 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all">
+              Later
+            </button>
+            <button onclick="confirmDelete()"
+              class="px-6 py-3 text-white bg-red-600 hover:bg-red-700 rounded-xl font-bold shadow-lg shadow-red-200 transition-all active:scale-95">
+              Yes, Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allPromoters = [];
+    let filteredPromoters = [];
+    let deletePromoterData = null;
+
+    // Load promoters on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPromoters();
+      populateDropdowns();
+    });
+
+    // Load all promoters
+    async function loadPromoters() {
+      try {
+        const response = await fetch('/api/promoters');
+        const data = await response.json();
+
+        if (data.success) {
+          allPromoters = data.promoters || [];
+          document.getElementById('totalCount').textContent = allPromoters.length;
+          filteredPromoters = [...allPromoters];
+          renderTable();
+          populateDropdowns();
+        }
+      } catch (error) {
+        console.error('Error loading promoters:', error);
+        document.getElementById('promotersTable').innerHTML = `
+          <tr>
+            <td colspan="8" class="px-6 py-8 text-center text-red-600">
+              Error loading promoters. Please try again.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // Apply filters
+    async function applyFilters() {
+      const search = document.getElementById('searchInput').value;
+      const name = document.getElementById('nameFilter').value;
+      const promoterId = document.getElementById('promoterIdFilter').value;
+      const brand = document.getElementById('brandFilter').value;
+      const location = document.getElementById('locationFilter').value;
+
+      try {
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (name) params.append('name', name);
+        if (promoterId) params.append('promoter_id', promoterId);
+        if (brand) params.append('brand', brand);
+        if (location) params.append('location', location);
+
+        const response = await fetch(`/api/promoters?${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success) {
+          filteredPromoters = data.promoters || [];
+          document.getElementById('recordCount').textContent = filteredPromoters.length;
+          renderTable();
+        }
+      } catch (error) {
+        console.error('Error applying filters:', error);
+      }
+    }
+
+    // Render table
+    function renderTable() {
+      const tbody = document.getElementById('promotersTable');
+
+      if (filteredPromoters.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+              No promoters found
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filteredPromoters.map(promoter => `
+        <tr class="table-row border-b hover:bg-blue-50 transition">
+          <td class="px-6 py-4 text-sm">${promoter.employeeno}</td>
+          <td class="px-6 py-4 text-sm">${promoter.full_name || promoter.first_name + ' ' + promoter.last_name}</td>
+          <td class="px-6 py-4 text-sm">${promoter.promoter_id || '-'}</td>
+          <td class="px-6 py-4 text-sm">${promoter.brand || '-'}</td>
+          <td class="px-6 py-4 text-sm">${promoter.location || '-'}</td>
+          <td class="px-6 py-4 text-sm">${promoter.contact_no || '-'}</td>
+          <td class="px-6 py-4 text-sm">${promoter.category || '-'}</td>
+          <td class="px-6 py-4 text-sm">${promoter.position || '-'}</td>
+          <td class="px-6 py-4 text-sm">${promoter.function || '-'}</td>
+          <td class="px-6 py-4 text-center">
+            <button onclick="editPromoter('${promoter.id}')" class="text-blue-600 hover:text-blue-800 font-semibold mr-3" title="Edit">✎</button>
+            <button onclick="deletePromoter('${promoter.id}', '${promoter.full_name || promoter.first_name + ' ' + promoter.last_name}')" class="text-red-600 hover:text-red-800 font-semibold" title="Delete">🗑️</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Open add modal
+    function openAddModal() {
+      document.getElementById('promoterId').value = '';
+      document.getElementById('modalTitle').textContent = 'Add New Promoter';
+      document.getElementById('promoterForm').reset();
+      document.getElementById('promoterModal').classList.add('active');
+    }
+
+    // Edit promoter
+    async function editPromoter(id) {
+      try {
+        const response = await fetch(`/api/promoters/${id}`);
+        const data = await response.json();
+
+        if (data.success && data.promoter) {
+          const p = data.promoter;
+          document.getElementById('promoterId').value = p.id;
+          document.getElementById('employeeno').value = p.employeeno;
+          document.getElementById('promoter_id').value = p.promoter_id || '';
+          document.getElementById('first_name').value = p.first_name;
+          document.getElementById('last_name').value = p.last_name;
+          document.getElementById('full_name').value = p.full_name || '';
+          document.getElementById('date_hired').value = p.date_hired || '';
+          document.getElementById('date_expired').value = p.date_expired || '';
+          document.getElementById('brand').value = p.brand || '';
+          document.getElementById('category').value = p.category || '';
+          document.getElementById('position').value = p.position || '';
+          document.getElementById('function').value = p.function || '';
+          document.getElementById('employer').value = p.employer || '';
+          document.getElementById('nickname').value = p.nickname || '';
+          document.getElementById('contact_no').value = p.contact_no || '';
+          document.getElementById('address').value = p.address || '';
+          document.getElementById('emergency_contact').value = p.emergency_contact || '';
+          document.getElementById('contact_person').value = p.contact_person || '';
+          document.getElementById('location').value = p.location || '';
+          document.getElementById('district').value = p.district || '';
+          document.getElementById('division').value = p.division || '';
+          document.getElementById('hrgen').value = p.hrgen || '';
+
+          document.getElementById('modalTitle').textContent = 'Edit Promoter';
+          document.getElementById('promoterModal').classList.add('active');
+        }
+      } catch (error) {
+        alert('Error loading promoter data');
+      }
+    }
+
+    // Save promoter
+    async function savePromoter() {
+      const id = document.getElementById('promoterId').value;
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/promoters/${id}` : '/api/promoters';
+
+      const data = {
+        employeeno: document.getElementById('employeeno').value,
+        promoter_id: document.getElementById('promoter_id').value,
+        first_name: document.getElementById('first_name').value,
+        last_name: document.getElementById('last_name').value,
+        full_name: document.getElementById('full_name').value,
+        date_hired: document.getElementById('date_hired').value,
+        date_expired: document.getElementById('date_expired').value,
+        brand: document.getElementById('brand').value,
+        category: document.getElementById('category').value,
+        position: document.getElementById('position').value,
+        function: document.getElementById('function').value,
+        employer: document.getElementById('employer').value,
+        nickname: document.getElementById('nickname').value,
+        contact_no: document.getElementById('contact_no').value,
+        address: document.getElementById('address').value,
+        emergency_contact: document.getElementById('emergency_contact').value,
+        contact_person: document.getElementById('contact_person').value,
+        location: document.getElementById('location').value,
+        district: document.getElementById('district').value,
+        division: document.getElementById('division').value,
+        hrgen: document.getElementById('hrgen').value
+      };
+
+      try {
+        const response = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          closeModal();
+          loadPromoters();
+          alert(id ? 'Promoter updated successfully' : 'Promoter added successfully');
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Error saving promoter: ' + error.message);
+      }
+    }
+
+    // Delete promoter
+    function deletePromoter(id, name) {
+      deletePromoterData = { id, name };
+      document.getElementById('deleteMessage').textContent = `Are you sure you want to delete ${name}?`;
+      document.getElementById('deleteModal').classList.add('active');
+    }
+
+    // Confirm delete
+    async function confirmDelete() {
+      if (!deletePromoterData) return;
+
+      try {
+        const response = await fetch(`/api/promoters/${deletePromoterData.id}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          closeDeleteModal();
+          loadPromoters();
+          alert('Promoter deleted successfully');
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Error deleting promoter: ' + error.message);
+      }
+    }
+
+    // Close modals
+    function closeModal() {
+      document.getElementById('promoterModal').classList.remove('active');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('active');
+      deletePromoterData = null;
+    }
+
+    // Delete all promoters function
+    async function deleteAllPromoters() {
+      if (allPromoters.length === 0) {
+        alert('There is no data to delete.');
+        return;
+      }
+
+      if (confirm(`⚠️ WARNING: This will permanently delete ALL ${allPromoters.length} records. This action cannot be undone. \n\nAre you sure you want to proceed?`)) {
+        try {
+          const response = await fetch('/api/promoters/all', {
+            method: 'DELETE'
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            alert('All records have been successfully deleted.');
+            loadPromoters(); // Reload the table (should be empty now)
+          } else {
+            alert('Error deleting records: ' + (result.error || 'Unknown error'));
+          }
+        } catch (error) {
+          alert('Failed to delete all records: ' + error.message);
+        }
+      }
+    }
+
+    // Populate dropdowns from data
+    function populateDropdowns() {
+      const brands = [...new Set(allPromoters.map(p => p.brand).filter(b => b))];
+      const locations = [...new Set(allPromoters.map(p => p.location).filter(l => l))];
+
+      const brandSelect = document.getElementById('brandFilter');
+      const locationSelect = document.getElementById('locationFilter');
+
+      // Preserve selected values
+      const selectedBrand = brandSelect.value;
+      const selectedLocation = locationSelect.value;
+
+      brandSelect.innerHTML = '<option value="">All Brands</option>' +
+        brands.map(b => `<option value="${b}">${b}</option>`).join('');
+      locationSelect.innerHTML = '<option value="">All Locations</option>' +
+        locations.map(l => `<option value="${l}">${l}</option>`).join('');
+
+      brandSelect.value = selectedBrand;
+      locationSelect.value = selectedLocation;
+    }
+
+    // Export to Excel
+    async function exportToExcel() {
+      try {
+        const search = document.getElementById('searchInput').value;
+        const name = document.getElementById('nameFilter').value;
+        const promoterId = document.getElementById('promoterIdFilter').value;
+        const brand = document.getElementById('brandFilter').value;
+        const location = document.getElementById('locationFilter').value;
+
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (name) params.append('name', name);
+        if (promoterId) params.append('promoter_id', promoterId);
+        if (brand) params.append('brand', brand);
+        if (location) params.append('location', location);
+
+        const url = `/export-promoters?${params.toString()}`;
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `promoters-export-${new Date().getTime()}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        alert('Error exporting data: ' + error.message);
+      }
+    }
+
+    // Download import template
+    function downloadImportTemplate() {
+      try {
+        const link = document.createElement('a');
+        link.href = '/download-import-template';
+        link.download = `Promoters_Import_Template_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        alert('Error downloading template: ' + error.message);
+      }
+    }
+
+    // Import file
+    async function importFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch('/import-promoters', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert(`
+Import Summary:
+✓ Imported: ${result.summary.imported_count}
+✓ Updated: ${result.summary.updated_count}
+✗ Failed: ${result.summary.failed_count}
+
+${result.errors.length > 0 ? 'Errors:\n' + result.errors.slice(0, 5).join('\n') : 'All records processed successfully!'}
+          `);
+          loadPromoters();
+          document.getElementById('fileInput').value = '';
+        } else {
+          alert('Import failed: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error importing file: ' + error.message);
+      }
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', (e) => {
+      const modal = document.getElementById('promoterModal');
+      const deleteModal = document.getElementById('deleteModal');
+      if (e.target === modal) closeModal();
+      if (e.target === deleteModal) closeDeleteModal();
+    });
+  </script>
+</body>
+
+</html>

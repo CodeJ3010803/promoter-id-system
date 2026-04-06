@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ID Generator - HR Management System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    .tab-button {
+      @apply px-4 py-2 rounded-t-lg font-semibold transition;
+    }
+    .tab-button.active {
+      @apply bg-blue-500 text-white;
+    }
+    .tab-button.inactive {
+      @apply bg-gray-300 text-gray-700 hover:bg-gray-400;
+    }
+    .canvas-preview {
+      @apply border border-gray-300 rounded bg-white overflow-hidden;
+      width: 250px;
+      height: 160px;
+    }
+    .promoter-tag {
+      @apply inline-block bg-blue-500 text-white px-3 py-1 rounded mr-2 mb-2;
+    }
+    .promoter-tag .remove {
+      @apply ml-2 cursor-pointer font-bold hover:text-red-200;
+    }
+    .preview-card {
+      @apply border-2 border-gray-300 rounded-lg p-4 mb-4 cursor-pointer transition hover:border-blue-500 hover:shadow-lg;
+    }
+    .preview-card.selected {
+      @apply border-blue-500 bg-blue-50 shadow-lg;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-800 text-white p-6 shadow-lg">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-4xl font-bold mb-2">ID Generator</h1>
+            <p class="text-purple-100">Generate employee ID cards from templates</p>
+          </div>
+          <div class="flex gap-4">
+            <a href="/app/public/id-designer.html" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50 transition">
+              ✏️ Designer
+            </a>
+            <a href="/" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50 transition">
+              ← Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8">
+      <div class="max-w-7xl mx-auto">
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-6">
+          <button onclick="switchTab('setup')" class="tab-button active" id="setupTab">
+            1️⃣ Setup
+          </button>
+          <button onclick="switchTab('promoters')" class="tab-button inactive" id="promotersTab">
+            2️⃣ Select Promoters
+          </button>
+          <button onclick="switchTab('preview')" class="tab-button inactive" id="previewTab">
+            3️⃣ Preview
+          </button>
+          <button onclick="switchTab('export')" class="tab-button inactive" id="exportTab">
+            4️⃣ Export
+          </button>
+        </div>
+
+        <!-- Tab: Setup -->
+        <div id="setupTab-content" class="tab-content">
+          <div class="bg-white p-8 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-6">Step 1: Select Template</h2>
+            
+            <div class="mb-6">
+              <label class="block text-lg font-semibold mb-4">Available Templates:</label>
+              <div id="templatesList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Templates will be loaded here -->
+              </div>
+            </div>
+
+            <div id="selectedTemplate" class="hidden mb-8 p-6 bg-blue-50 rounded-lg border-2 border-blue-500">
+              <h3 class="text-xl font-semibold mb-4">✅ Selected Template</h3>
+              <div class="grid grid-cols-2 gap-6">
+                <div>
+                  <h4 class="font-semibold mb-2">Front Side:</h4>
+                  <canvas id="templateFrontPreview" class="canvas-preview bg-white"></canvas>
+                </div>
+                <div>
+                  <h4 class="font-semibold mb-2">Back Side:</h4>
+                  <canvas id="templateBackPreview" class="canvas-preview bg-white"></canvas>
+                </div>
+              </div>
+              <div class="mt-4">
+                <p class="text-sm text-gray-600 mb-2"><strong>Template Name:</strong> <span id="templateName">-</span></p>
+                <p class="text-sm text-gray-600"><strong>Template Size:</strong> <span id="templateSize">-</span></p>
+              </div>
+              <button onclick="resetTemplate()" class="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                🔄 Change Template
+              </button>
+            </div>
+
+            <div id="templateHint" class="p-4 bg-yellow-50 rounded-lg border border-yellow-300">
+              <p class="text-sm text-gray-700">
+                <strong>📌 Tip:</strong> Select a template to see a preview. Once selected, proceed to the next step to choose promoters.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Select Promoters -->
+        <div id="promotersTab-content" class="tab-content hidden">
+          <div class="bg-white p-8 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-6">Step 2: Select Promoters</h2>
+
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+              <p class="text-sm text-blue-800">
+                <strong>📋 Template Selected:</strong> <span id="selectedTemplateName">None</span>
+              </p>
+            </div>
+
+            <!-- Search & Selection -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <!-- Search -->
+              <div>
+                <h3 class="text-lg font-semibold mb-4">Search Promoters</h3>
+                <input type="text" id="searchPromoter" placeholder="Search by ID, name, or email..." 
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4">
+                <div id="searchResults" class="border border-gray-300 rounded-lg max-h-96 overflow-y-auto bg-white">
+                  <!-- Results will appear here -->
+                </div>
+              </div>
+
+              <!-- Bulk Input -->
+              <div>
+                <h3 class="text-lg font-semibold mb-4">Paste Promoter IDs</h3>
+                <textarea id="bulkIds" placeholder="Paste one ID per line or comma-separated..."
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 h-48" rows="8"></textarea>
+                <button onclick="addBulkPromoters()" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">
+                  ➕ Add Promoters from Paste
+                </button>
+              </div>
+            </div>
+
+            <!-- Selected Promoters -->
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold mb-4">Selected Promoters (<span id="selectedCount">0</span>)</h3>
+              <div id="selectedPromoters" class="p-4 bg-gray-50 rounded-lg min-h-24 max-h-48 overflow-y-auto">
+                <!-- Selected promoters will appear here -->
+              </div>
+              <button onclick="clearSelected()" class="mt-3 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                🗑️ Clear All
+              </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4">
+              <button onclick="switchTab('setup')" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                ← Back
+              </button>
+              <button onclick="validateAndProceed()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">
+                Generate IDs →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Preview -->
+        <div id="previewTab-content" class="tab-content hidden">
+          <div class="bg-white p-8 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-6">Step 3: Preview Generated IDs</h2>
+
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+              <p class="text-sm text-blue-800">
+                <strong>📌 Status:</strong> <span id="previewStatus">Preparing...</span> 
+                | <strong>Total:</strong> <span id="totalIDs">0</span> IDs
+              </p>
+            </div>
+
+            <!-- Preview Cards -->
+            <div id="previewContainer" class="mb-8">
+              <!-- Preview cards will appear here -->
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex justify-between items-center mb-6">
+              <button onclick="previousId()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                ← Previous
+              </button>
+              <span class="text-center">
+                <input type="number" id="currentIdIndex" min="1" value="1" onchange="goToId(this.value)"
+                  class="w-16 px-2 py-1 border border-gray-300 rounded text-center"> 
+                of <span id="totalIdCount">0</span>
+              </span>
+              <button onclick="nextId()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                Next →
+              </button>
+            </div>
+
+            <!-- Detailed Preview -->
+            <div class="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <h3 class="text-lg font-semibold mb-4">Front Side</h3>
+                <canvas id="previewFrontCanvas" class="border border-gray-300 rounded bg-white w-full" width="648" height="408"></canvas>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold mb-4">Back Side</h3>
+                <canvas id="previewBackCanvas" class="border border-gray-300 rounded bg-white w-full" width="648" height="408"></canvas>
+              </div>
+            </div>
+
+            <!-- Promoter Details -->
+            <div id="promoterDetails" class="p-4 bg-gray-50 rounded-lg mb-6">
+              <!-- Promoter details will appear here -->
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4">
+              <button onclick="switchTab('promoters')" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                ← Back
+              </button>
+              <button onclick="switchTab('export')" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">
+                Export →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Export -->
+        <div id="exportTab-content" class="tab-content hidden">
+          <div class="bg-white p-8 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-6">Step 4: Export IDs</h2>
+
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+              <p class="text-sm text-blue-800">
+                <strong>📊 Ready to Export:</strong> <span id="exportCount">0</span> IDs generated
+              </p>
+            </div>
+
+            <!-- Export Options -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <!-- PDF Export -->
+              <div class="p-6 border-2 border-gray-300 rounded-lg hover:border-red-500 cursor-pointer transition hover:shadow-lg" onclick="exportToPDF()">
+                <div class="text-4xl mb-4">📄</div>
+                <h3 class="text-lg font-semibold mb-2">PDF</h3>
+                <p class="text-sm text-gray-600">High-quality PDF with front & back side-by-side</p>
+                <div class="mt-4 text-red-600 font-semibold">Export PDF</div>
+              </div>
+
+              <!-- Word Export -->
+              <div class="p-6 border-2 border-gray-300 rounded-lg hover:border-blue-600 cursor-pointer transition hover:shadow-lg" onclick="exportToWord()">
+                <div class="text-4xl mb-4">📝</div>
+                <h3 class="text-lg font-semibold mb-2">Word (DOCX)</h3>
+                <p class="text-sm text-gray-600">Professional Word document with images & details</p>
+                <div class="mt-4 text-blue-600 font-semibold">Export DOCX</div>
+              </div>
+
+              <!-- PNG Export -->
+              <div class="p-6 border-2 border-gray-300 rounded-lg hover:border-purple-500 cursor-pointer transition hover:shadow-lg" onclick="exportToPNG()">
+                <div class="text-4xl mb-4">🖼️</div>
+                <h3 class="text-lg font-semibold mb-2">Images (PNG)</h3>
+                <p class="text-sm text-gray-600">Individual PNG files for each ID front & back</p>
+                <div class="mt-4 text-purple-600 font-semibold">Export PNG</div>
+              </div>
+
+              <!-- JSON Export -->
+              <div class="p-6 border-2 border-gray-300 rounded-lg hover:border-green-500 cursor-pointer transition hover:shadow-lg" onclick="exportToJSON()">
+                <div class="text-4xl mb-4">📋</div>
+                <h3 class="text-lg font-semibold mb-2">Data (JSON)</h3>
+                <p class="text-sm text-gray-600">Templates and data for later use or import</p>
+                <div class="mt-4 text-green-600 font-semibold">Export JSON</div>
+              </div>
+            </div>
+
+            <!-- Additional Export Options -->
+            <div class="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-300">
+              <h3 class="text-lg font-semibold mb-4">📊 Other Exports</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="exportPromotersToExcel()" class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition">
+                  📈 Export Promoter List to Excel
+                </button>
+                <button onclick="window.location.href='/export-promoters'" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition">
+                  🔍 Download Full Promoter Report
+                </button>
+              </div>
+            </div>
+
+            <!-- Export Progress -->
+            <div id="exportProgress" class="hidden mb-6 p-4 bg-blue-50 rounded-lg">
+              <div class="mb-2">Exporting: <span id="exportProgressText">0%</span></div>
+              <div class="w-full bg-gray-300 rounded-full h-2">
+                <div id="exportProgressBar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4">
+              <button onclick="switchTab('preview')" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                ← Back
+              </button>
+              <button onclick="startOver()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg">
+                🔄 Start Over
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Global state
+    let state = {
+      currentTemplate: null,
+      selectedPromooters: [],
+      generatedIDs: [],
+      currentPreviewIndex: 0
+    };
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTemplates();
+      setupSearchListener();
+    });
+
+    // Tab switching
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+
+      // Show selected tab
+      document.getElementById(tabName + 'Tab-content').classList.remove('hidden');
+      document.getElementById(tabName + 'Tab').classList.add('active');
+      document.getElementById(tabName + 'Tab').classList.remove('inactive');
+
+      // Update other tabs to inactive
+      document.querySelectorAll('.tab-button:not(.active)').forEach(el => {
+        el.classList.add('inactive');
+      });
+    }
+
+    // Load templates from server
+    async function loadTemplates() {
+      try {
+        const response = await fetch('/api/templates');
+        const result = await response.json();
+
+        if (result.success && result.templates) {
+          const container = document.getElementById('templatesList');
+          container.innerHTML = result.templates.map(template => `
+            <div class="p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition"
+              onclick="selectTemplate('${template.id}')">
+              <h3 class="font-semibold text-lg mb-2">${template.template_name}</h3>
+              <p class="text-sm text-gray-600 mb-3">Created: ${template.created_at}</p>
+              <div class="text-sm text-blue-600 font-semibold">📋 Select Template</div>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        alert('Error loading templates: ' + error.message);
+      }
+    }
+
+    // Select template
+    async function selectTemplate(templateId) {
+      try {
+        const response = await fetch(`/api/templates/${templateId}`);
+        const result = await response.json();
+
+        if (result.success && result.template) {
+          state.currentTemplate = result.template;
+          
+          // Show preview
+          document.getElementById('selectedTemplate').classList.remove('hidden');
+          document.getElementById('templateHint').classList.add('hidden');
+          document.getElementById('templateName').textContent = result.template.template_name;
+          document.getElementById('templateSize').textContent = `${result.template.width}x${result.template.height}px`;
+
+          // Render preview canvases
+          renderTemplatePreview(result.template);
+
+          // Update promoters tab
+          document.getElementById('selectedTemplateName').textContent = result.template.template_name;
+        }
+      } catch (error) {
+        alert('Error loading template: ' + error.message);
+      }
+    }
+
+    // Render template preview
+    function renderTemplatePreview(template) {
+      const frontCanvas = new fabric.Canvas('templateFrontPreview');
+      const backCanvas = new fabric.Canvas('templateBackPreview');
+
+      if (template.front_canvas_json) {
+        const frontData = JSON.parse(template.front_canvas_json);
+        frontCanvas.loadFromJSON(frontData, () => {
+          frontCanvas.renderAll();
+        });
+      }
+
+      if (template.back_canvas_json) {
+        const backData = JSON.parse(template.back_canvas_json);
+        backCanvas.loadFromJSON(backData, () => {
+          backCanvas.renderAll();
+        });
+      }
+    }
+
+    // Reset template
+    function resetTemplate() {
+      state.currentTemplate = null;
+      document.getElementById('selectedTemplate').classList.add('hidden');
+      document.getElementById('templateHint').classList.remove('hidden');
+      document.getElementById('selectedTemplateName').textContent = 'None';
+    }
+
+    // Setup search listener
+    function setupSearchListener() {
+      document.getElementById('searchPromoter').addEventListener('input', debounce(searchPromoters, 300));
+    }
+
+    // Search promoters
+    async function searchPromoters(query) {
+      if (!query.trim()) {
+        document.getElementById('searchResults').innerHTML = '';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/promoters/search?q=${encodeURIComponent(query)}`);
+        const result = await response.json();
+
+        if (result.success && result.promoters) {
+          const container = document.getElementById('searchResults');
+          container.innerHTML = result.promoters.map(p => `
+            <div class="p-3 border-b cursor-pointer hover:bg-blue-50 transition" onclick="addPromoter('${p.id}', '${p.promoter_id}', '${p.full_name}')">
+              <div class="font-semibold">${p.full_name} (${p.promoter_id})</div>
+              <div class="text-sm text-gray-600">${p.employeeno}</div>
+            </div>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('Error searching promoters:', error);
+      }
+    }
+
+    // Add single promoter
+    function addPromoter(id, promoterId, name) {
+      if (!state.selectedPromoters.find(p => p.id === id)) {
+        state.selectedPromoters.push({ id, promoterId, name });
+        updateSelectedDisplay();
+      }
+      document.getElementById('searchPromoter').value = '';
+      document.getElementById('searchResults').innerHTML = '';
+    }
+
+    // Add bulk promoters
+    function addBulkPromoters() {
+      const input = document.getElementById('bulkIds').value;
+      const ids = input.split(/[,\n]+/).map(id => id.trim()).filter(id => id);
+
+      if (ids.length === 0) {
+        alert('Please enter at least one promoter ID');
+        return;
+      }
+
+      // Search for each ID and add to selected
+      let found = 0;
+      let notFound = [];
+
+      const searchPromise = Promise.all(ids.map(async (promId) => {
+        try {
+          const response = await fetch(`/api/promoters/search?q=${encodeURIComponent(promId)}`);
+          const result = await response.json();
+
+          if (result.success && result.promoters && result.promoters.length > 0) {
+            const p = result.promoters[0];
+            if (!state.selectedPromoters.find(sp => sp.id === p.id)) {
+              state.selectedPromoters.push({
+                id: p.id,
+                promoterId: p.promoter_id,
+                name: p.full_name
+              });
+              found++;
+            }
+          } else {
+            notFound.push(promId);
+          }
+        } catch (error) {
+          console.error('Error searching:', error);
+          notFound.push(promId);
+        }
+      }));
+
+      searchPromise.then(() => {
+        updateSelectedDisplay();
+        document.getElementById('bulkIds').value = '';
+        
+        let msg = `Added ${found} promoter(s)`;
+        if (notFound.length > 0) {
+          msg += `\nNot found: ${notFound.join(', ')}`;
+        }
+        alert(msg);
+      });
+    }
+
+    // Update selected display
+    function updateSelectedDisplay() {
+      const container = document.getElementById('selectedPromoters');
+      document.getElementById('selectedCount').textContent = state.selectedPromoters.length;
+
+      container.innerHTML = state.selectedPromoters.map(p => `
+        <div class="promoter-tag">
+          ${p.name} (${p.promoterId})
+          <span class="remove" onclick="removePromoter('${p.id}')">✕</span>
+        </div>
+      `).join('');
+    }
+
+    // Remove promoter
+    function removePromoter(id) {
+      state.selectedPromoters = state.selectedPromoters.filter(p => p.id !== id);
+      updateSelectedDisplay();
+    }
+
+    // Clear selected
+    function clearSelected() {
+      state.selectedPromoters = [];
+      updateSelectedDisplay();
+    }
+
+    // Validate and proceed
+    async function validateAndProceed() {
+      if (!state.currentTemplate) {
+        alert('Please select a template first');
+        switchTab('setup');
+        return;
+      }
+
+      if (state.selectedPromoters.length === 0) {
+        alert('Please select at least one promoter');
+        return;
+      }
+
+      // Generate IDs
+      await generateIDs();
+      switchTab('preview');
+    }
+
+    // Generate IDs
+    async function generateIDs() {
+      document.getElementById('previewStatus').textContent = '⏳ Generating IDs...';
+      state.generatedIDs = [];
+
+      for (let i = 0; i < state.selectedPromoters.length; i++) {
+        const promoter = state.selectedPromoters[i];
+        const id = await generateIDForPromoter(promoter.id);
+        state.generatedIDs.push(id);
+
+        // Update progress
+        const progress = Math.round((i + 1) / state.selectedPromoters.length * 100);
+        document.getElementById('previewStatus').textContent = `⏳ Generating IDs... ${progress}%`;
+      }
+
+      document.getElementById('previewStatus').textContent = '✅ Ready!';
+      document.getElementById('totalIDs').textContent = state.generatedIDs.length;
+      document.getElementById('totalIdCount').textContent = state.generatedIDs.length;
+      document.getElementById('exportCount').textContent = state.generatedIDs.length;
+
+      // Show first ID
+      state.currentPreviewIndex = 0;
+      showPreview(0);
+    }
+
+    // Generate ID for single promoter
+    async function generateIDForPromoter(promoterId) {
+      try {
+        const response = await fetch(`/api/promoters/${promoterId}`);
+        const result = await response.json();
+
+        if (result.success && result.promoter) {
+          const promoter = result.promoter;
+          
+          // Clone template data
+          const frontData = JSON.parse(JSON.stringify(JSON.parse(state.currentTemplate.front_canvas_json)));
+          const backData = JSON.parse(JSON.stringify(JSON.parse(state.currentTemplate.back_canvas_json)));
+
+          // Replace placeholders with actual data
+          const placeholders = {
+            '[employeeno]': promoter.employeeno || '',
+            '[promoter_id]': promoter.promoter_id || '',
+            '[full_name]': promoter.full_name || '',
+            '[date_hired]': promoter.date_hired || '',
+            '[date_expired]': promoter.date_expired || '',
+            '[brand]': promoter.brand || '',
+            '[category]': promoter.category || '',
+            '[employer]': promoter.employer || '',
+            '[nickname]': promoter.nickname || '',
+            '[position]': promoter.position || '',
+            '[function]': promoter.function || '',
+            '[contact_no]': promoter.contact_no || '',
+            '[address]': promoter.address || '',
+            '[emergency_contact]': promoter.emergency_contact || '',
+            '[contact_person]': promoter.contact_person || '',
+            '[location]': promoter.location || '',
+            '[district]': promoter.district || '',
+            '[division]': promoter.division || '',
+            '[hrgen]': promoter.hrgen || '',
+            '[control_no]': promoter.control_no || promoter.promoter_id || ''
+          };
+
+          // Function to replace placeholders in canvas objects
+          function replacePlaceholders(canvasData) {
+            if (canvasData.objects) {
+              canvasData.objects = canvasData.objects.map(obj => {
+                // Replace placeholder text
+                if (typeof obj.text === 'string') {
+                  let newText = obj.text;
+                  Object.keys(placeholders).forEach(key => {
+                    newText = newText.replace(new RegExp(key.replace(/[[\]{}()*+?.\\^$|]/g, '\\$&'), 'g'), placeholders[key]);
+                  });
+                  obj.text = newText;
+                }
+                
+                // Handle barcode generation for promoter_id field
+                if (obj.type === 'image' && typeof obj.data === 'string' && obj.data.includes('barcode')) {
+                  // We'll generate barcode separately
+                  obj._barcode = true;
+                  obj._promoter_id = promoter.promoter_id;
+                }
+                
+                // Handle photo placeholder
+                if (obj.type === 'image' && obj.data && obj.data.includes('photo')) {
+                  obj._photo = true;
+                  obj._employeeno = promoter.employeeno;
+                }
+                
+                return obj;
+              });
+            }
+            return canvasData;
+          }
+
+          const processedFront = replacePlaceholders(frontData);
+          const processedBack = replacePlaceholders(backData);
+
+          return {
+            promoterId: promoter.id,
+            promoter: promoter,
+            frontCanvas: processedFront,
+            backCanvas: processedBack
+          };
+        }
+      } catch (error) {
+        console.error('Error generating ID:', error);
+      }
+    }
+
+    // Show preview
+    function showPreview(index) {
+      state.currentPreviewIndex = index;
+      document.getElementById('currentIdIndex').value = index + 1;
+
+      const id = state.generatedIDs[index];
+      
+      // Render front canvas
+      const frontCanvas = new fabric.Canvas('previewFrontCanvas', {
+        width: state.currentTemplate.width || 648,
+        height: state.currentTemplate.height || 408
+      });
+      
+      frontCanvas.loadFromJSON(id.frontCanvas, async () => {
+        // Handle special objects (barcodes, photos)
+        frontCanvas.forEachObject(obj => {
+          if (obj._barcode && obj._promoter_id) {
+            // Generate barcode
+            generateBarcodeForCanvas(frontCanvas, obj, id.promoter.promoter_id);
+          }
+        });
+        frontCanvas.renderAll();
+      });
+
+      // Render back canvas
+      const backCanvas = new fabric.Canvas('previewBackCanvas', {
+        width: state.currentTemplate.width || 648,
+        height: state.currentTemplate.height || 408
+      });
+      
+      backCanvas.loadFromJSON(id.backCanvas, async () => {
+        // Handle special objects (barcodes, photos)
+        backCanvas.forEachObject(obj => {
+          if (obj._barcode && obj._promoter_id) {
+            // Generate barcode
+            generateBarcodeForCanvas(backCanvas, obj, id.promoter.promoter_id);
+          }
+        });
+        backCanvas.renderAll();
+      });
+
+      // Show promoter details
+      const promoter = id.promoter;
+      document.getElementById('promoterDetails').innerHTML = `
+        <h3 class="text-lg font-semibold mb-3">Promoter: ${promoter.full_name}</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div><strong>ID:</strong> ${promoter.promoter_id}</div>
+          <div><strong>Employee No:</strong> ${promoter.employeeno}</div>
+          <div><strong>Brand:</strong> ${promoter.brand || 'N/A'}</div>
+          <div><strong>Location:</strong> ${promoter.location || 'N/A'}</div>
+          <div><strong>Contact:</strong> ${promoter.contact_no || 'N/A'}</div>
+          <div><strong>Date Hired:</strong> ${promoter.date_hired || 'N/A'}</div>
+          <div><strong>Date Expired:</strong> ${promoter.date_expired || 'N/A'}</div>
+          <div><strong>Division:</strong> ${promoter.division || 'N/A'}</div>
+          <div><strong>Category:</strong> ${promoter.category || 'N/A'}</div>
+          <div><strong>Employer:</strong> ${promoter.employer || 'N/A'}</div>
+          <div><strong>Nickname:</strong> ${promoter.nickname || 'N/A'}</div>
+        </div>
+      `;
+    }
+
+    // Generate barcode for canvas
+    function generateBarcodeForCanvas(canvas, obj, barcodeValue) {
+      const tempCanvas = document.createElement('canvas');
+      JsBarcode(tempCanvas, barcodeValue, {
+        format: 'CODE128',
+        width: 2,
+        height: 100,
+        displayValue: true
+      });
+      
+      const imgData = tempCanvas.toDataURL('image/png');
+      fabric.Image.fromURL(imgData, (img) => {
+        img.set({
+          left: obj.left,
+          top: obj.top,
+          scaleX: obj.scaleX || 1,
+          scaleY: obj.scaleY || 1
+        });
+        canvas.add(img);
+        canvas.remove(obj);
+        canvas.renderAll();
+      });
+    }
+
+    // Navigation
+    function previousId() {
+      if (state.currentPreviewIndex > 0) {
+        showPreview(state.currentPreviewIndex - 1);
+      }
+    }
+
+    function nextId() {
+      if (state.currentPreviewIndex < state.generatedIDs.length - 1) {
+        showPreview(state.currentPreviewIndex + 1);
+      }
+    }
+
+    function goToId(index) {
+      const idx = parseInt(index) - 1;
+      if (idx >= 0 && idx < state.generatedIDs.length) {
+        showPreview(idx);
+      }
+    }
+
+    // Export functions
+    async function exportToPDF() {
+      if (state.generatedIDs.length === 0) {
+        alert('No IDs to export');
+        return;
+      }
+
+      showExportProgress(0);
+
+      try {
+        // Prepare data for export
+        const exportData = state.generatedIDs.map(id => ({
+          promoter: id.promoter,
+          frontCanvas: id.frontCanvas,
+          backCanvas: id.backCanvas
+        }));
+
+        // Send to server
+        const response = await fetch('/api/export/pdf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            generatedIDs: exportData,
+            templateName: state.currentTemplate.template_name,
+            layout: 'side-by-side',
+            idsPerPage: 1
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Export failed');
+        }
+
+        // Download PDF
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ID_Cards_${new Date().getTime()}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        updateExportProgress(100);
+        setTimeout(() => {
+          hideExportProgress();
+          alert('PDF exported successfully!');
+        }, 500);
+      } catch (error) {
+        hideExportProgress();
+        alert('Error exporting PDF: ' + error.message);
+      }
+    }
+
+    async function exportToPNG() {
+      if (state.generatedIDs.length === 0) {
+        alert('No IDs to export');
+        return;
+      }
+
+      showExportProgress(0);
+
+      try {
+        for (let i = 0; i < state.generatedIDs.length; i++) {
+          const id = state.generatedIDs[i];
+          const promoter = id.promoter;
+
+          // Render front canvas to image
+          const frontCanvas = new fabric.Canvas('tempFrontCanvas', {
+            width: state.currentTemplate.width || 1080,
+            height: state.currentTemplate.height || 1920
+          });
+          await new Promise(resolve => {
+            frontCanvas.loadFromJSON(id.frontCanvas, () => resolve());
+          });
+
+          // Render back canvas to image
+          const backCanvas = new fabric.Canvas('tempBackCanvas', {
+            width: state.currentTemplate.width || 1080,
+            height: state.currentTemplate.height || 1920
+          });
+          await new Promise(resolve => {
+            backCanvas.loadFromJSON(id.backCanvas, () => resolve());
+          });
+
+          // Convert to images
+          const frontImage = frontCanvas.toDataURL();
+          const backImage = backCanvas.toDataURL();
+
+          // Download individually
+          downloadImage(frontImage, `ID_${promoter.promoter_id}_Front.png`);
+          downloadImage(backImage, `ID_${promoter.promoter_id}_Back.png`);
+
+          // Update progress
+          const progress = Math.round((i + 1) / state.generatedIDs.length * 100);
+          updateExportProgress(progress);
+        }
+
+        hideExportProgress();
+        alert('PNG files exported successfully!');
+      } catch (error) {
+        hideExportProgress();
+        alert('Error exporting PNG: ' + error.message);
+      }
+    }
+
+    async function exportToJSON() {
+      if (state.generatedIDs.length === 0) {
+        alert('No IDs to export');
+        return;
+      }
+
+      try {
+        const exportData = {
+          timestamp: new Date().toISOString(),
+          template: {
+            name: state.currentTemplate.template_name,
+            width: state.currentTemplate.width,
+            height: state.currentTemplate.height
+          },
+          promoters: state.generatedIDs.map(id => ({
+            promoter_id: id.promoter.promoter_id,
+            full_name: id.promoter.full_name,
+            employeeno: id.promoter.employeeno,
+            front_canvas: id.frontCanvas,
+            back_canvas: id.backCanvas
+          }))
+        };
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ID_Generator_Export_${new Date().getTime()}.json`;
+        link.click();
+
+        alert('JSON exported successfully!');
+      } catch (error) {
+        alert('Error exporting JSON: ' + error.message);
+      }
+    }
+
+    // Export to Word (DOCX)
+    async function exportToWord() {
+      if (state.generatedIDs.length === 0) {
+        alert('No IDs to export');
+        return;
+      }
+
+      showExportProgress(0);
+
+      try {
+        // Show layout options
+        const layout = confirm('Export with front/back side-by-side?\nOK = Side-by-side\nCancel = Stacked');
+
+        // Prepare data for export
+        const exportData = state.generatedIDs.map(id => ({
+          promoter: id.promoter,
+          frontCanvas: id.frontCanvas,
+          backCanvas: id.backCanvas
+        }));
+
+        // Send to server
+        const response = await fetch('/api/export/word', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            generatedIDs: exportData,
+            templateName: state.currentTemplate.template_name,
+            layout: layout ? 'side-by-side' : 'stacked',
+            idsPerPage: 1,
+            includePromoterInfo: true
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Export failed');
+        }
+
+        // Download DOCX
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ID_Cards_${new Date().getTime()}.docx`;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        updateExportProgress(100);
+        setTimeout(() => {
+          hideExportProgress();
+          alert('Word document exported successfully!');
+        }, 500);
+      } catch (error) {
+        hideExportProgress();
+        alert('Error exporting to Word: ' + error.message);
+      }
+    }
+
+    // Export promoter list to Excel
+    async function exportPromotersToExcel() {
+      try {
+        const response = await fetch('/api/export/excel');
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Export failed');
+        }
+
+        // Download Excel
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Promoters_Export_${new Date().getTime()}.xlsx`;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        alert('Excel file exported successfully!');
+      } catch (error) {
+        alert('Error exporting to Excel: ' + error.message);
+      }
+    }
+
+    // Helper to download image
+    function downloadImage(dataUrl, filename) {
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = filename;
+      link.click();
+    }
+
+    // Progress tracking
+    function showExportProgress(initial = 0) {
+      document.getElementById('exportProgress').classList.remove('hidden');
+      updateExportProgress(initial);
+    }
+
+    function updateExportProgress(percent) {
+      document.getElementById('exportProgressText').textContent = percent + '%';
+      document.getElementById('exportProgressBar').style.width = percent + '%';
+    }
+
+    function hideExportProgress() {
+      document.getElementById('exportProgress').classList.add('hidden');
+    }
+
+    // Start over
+    function startOver() {
+      state = {
+        currentTemplate: null,
+        selectedPromoters: [],
+        generatedIDs: [],
+        currentPreviewIndex: 0
+      };
+      switchTab('setup');
+      loadTemplates();
+    }
+
+    // Utility: Debounce
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+  </script>
+</body>
+</html>

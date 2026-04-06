@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promoter ID Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-button.active {
+      @apply bg-blue-600 text-white;
+    }
+
+    .tab-button {
+      @apply bg-gray-300 text-gray-800;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      transform: scale(0.9) translateY(20px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: white;
+      border-radius: 1.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 100%;
+      max-width: 28rem;
+      margin: 1.5rem;
+      overflow: hidden;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 shadow-lg">
+      <div class="max-w-7xl mx-auto">
+        <h1 class="text-4xl font-bold mb-2">Promoter ID Management & Designer</h1>
+        <p class="text-blue-100">Complete promoter database and ID management system</p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8">
+      <div class="max-w-7xl mx-auto">
+
+        <!-- Tab Navigation -->
+        <div class="flex gap-2 mb-8 border-b border-gray-300 flex-wrap">
+          <button onclick="switchTab('promoters')" class="tab-button active px-6 py-3 rounded-t-lg transition"
+            id="tab-promoters">
+            👥 Promoters
+          </button>
+          <a href="/promoters" class="px-6 py-3 rounded-t-lg transition bg-purple-500 hover:bg-purple-600 text-white"
+            title="Open full promoters list with advanced features">
+            📋 Promoters List
+          </a>
+          <a href="/standard-id-generator"
+            class="px-6 py-3 rounded-t-lg transition bg-yellow-500 hover:bg-yellow-600 text-white"
+            title="Generate standard IDs with bulk export">
+            🟨 Standard ID Generator
+          </a>
+          <a href="/id-designer" class="px-6 py-3 rounded-t-lg transition bg-indigo-500 hover:bg-indigo-600 text-white"
+            title="Design ID card templates">
+            🎨 ID Designer
+          </a>
+          <a href="/app/public/id-generator.html"
+            class="px-6 py-3 rounded-t-lg transition bg-green-500 hover:bg-green-600 text-white"
+            title="Generate IDs from templates">
+            ✨ ID Generator & Export
+          </a>
+          <button onclick="switchTab('templates')" class="tab-button px-6 py-3 rounded-t-lg transition"
+            id="tab-templates">
+            📋 Templates
+          </button>
+          <button onclick="switchTab('settings')" class="tab-button px-6 py-3 rounded-t-lg transition"
+            id="tab-settings">
+            ⚙️ Settings
+          </button>
+        </div>
+
+        <!-- Quick Access Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <!-- Standard ID Generator Card -->
+          <a href="/standard-id-generator"
+            class="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105">
+            <div class="text-4xl mb-4">🟨</div>
+            <h3 class="text-2xl font-bold mb-2">Standard ID Generator</h3>
+            <p class="text-yellow-100">Professional IDs with bulk export to PDF, Word, Print</p>
+            <div class="mt-4 text-sm bg-white bg-opacity-20 px-3 py-2 rounded-lg inline-block">Click to open →</div>
+          </a>
+
+          <!-- ID Designer Card -->
+          <a href="/id-designer"
+            class="bg-gradient-to-br from-indigo-400 to-indigo-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105">
+            <div class="text-4xl mb-4">🎨</div>
+            <h3 class="text-2xl font-bold mb-2">ID Designer</h3>
+            <p class="text-indigo-100">Design custom ID card templates with drag & drop</p>
+            <div class="mt-4 text-sm bg-white bg-opacity-20 px-3 py-2 rounded-lg inline-block">Click to open →</div>
+          </a>
+
+          <!-- Promoters List Card -->
+          <a href="/promoters"
+            class="bg-gradient-to-br from-purple-400 to-purple-600 text-white p-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:scale-105">
+            <div class="text-4xl mb-4">👥</div>
+            <h3 class="text-2xl font-bold mb-2">Promoters List</h3>
+            <p class="text-purple-100">View, manage, and import promoter data</p>
+            <div class="mt-4 text-sm bg-white bg-opacity-20 px-3 py-2 rounded-lg inline-block">Click to open →</div>
+          </a>
+        </div>
+
+        <!-- Promoters Tab -->
+        <div id="promoters-tab" class="tab-content">
+          <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-semibold">Promoters Database</h2>
+              <div class="flex gap-2">
+                <button onclick="loadPromoters()"
+                  class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition">
+                  🔄 Refresh
+                </button>
+                <button onclick="deleteAllPromoters()"
+                  class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition">
+                  🗑️ Delete All Records
+                </button>
+              </div>
+            </div>
+            <div id="promoters-list" class="overflow-x-auto"></div>
+          </div>
+        </div>
+
+        <!-- Templates Tab -->
+        <div id="templates-tab" class="tab-content hidden">
+          <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-semibold">ID Templates</h2>
+              <button onclick="loadTemplates()"
+                class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition">
+                🔄 Refresh
+              </button>
+            </div>
+            <div id="templates-list" class="overflow-x-auto"></div>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content hidden">
+          <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-6">System Settings & Configuration</h2>
+
+            <!-- Import Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div class="border border-blue-300 rounded-lg p-6 bg-blue-50">
+                <h3 class="text-lg font-semibold text-blue-900 mb-4">📥 Import Promoters</h3>
+                <p class="text-gray-700 mb-4">Download Excel template and import promoter data in bulk</p>
+                <button onclick="downloadTemplate()"
+                  class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition font-semibold mb-2">
+                  📄 Download Excel Template
+                </button>
+                <p class="text-sm text-gray-600 mb-4">Includes: Field descriptions, instructions, and system defaults
+                </p>
+
+                <!-- Excel Upload Form -->
+                <div class="space-y-3">
+                  <input type="file" id="importFile" accept=".xlsx,.xls,.csv"
+                    class="w-full px-4 py-3 border-2 border-dashed border-blue-300 rounded-lg bg-white hover:border-blue-400 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                  <button onclick="importPromoters()" id="importBtn"
+                    class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition font-semibold flex items-center justify-center gap-2">
+                    📤 Upload & Import Excel File
+                  </button>
+                  <div id="importProgress" class="hidden text-sm text-gray-600 text-center py-2 bg-gray-50 rounded-lg">
+                    <span>Processing...</span>
+                  </div>
+                  <div id="importResult" class="hidden bg-green-100 border border-green-200 rounded-lg p-3 text-sm">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="border border-green-300 rounded-lg p-6 bg-green-50">
+              <h3 class="text-lg font-semibold text-green-900 mb-4">⚙️ System Defaults</h3>
+              <div id="settings-defaults" class="space-y-2 text-sm"></div>
+            </div>
+          </div>
+
+          <!-- Detailed Settings -->
+          <div class="bg-gray-50 p-6 rounded-lg">
+            <h3 class="text-lg font-semibold mb-4">System Configuration Details</h3>
+            <div id="settings-details" class="space-y-4"></div>
+          </div>
+        </div>
+      </div>
+  </div>
+  </main>
+
+  <!-- Premium Delete Modal -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal-content p-8 border border-gray-100">
+      <div class="flex flex-col items-center text-center">
+        <div
+          class="w-24 h-24 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-5xl mb-6 animate-pulse">
+          ⚠️
+        </div>
+        <h3 class="text-3xl font-black text-gray-800 mb-4 tracking-tight">Clear Database?</h3>
+        <p id="deleteMessage" class="text-gray-500 mb-10 leading-relaxed font-medium text-lg">
+          This will permanently delete all records from the promoters database. This action cannot be reversed.
+        </p>
+        <div class="grid grid-cols-2 gap-4 w-full">
+          <button onclick="closeDeleteModal()"
+            class="px-8 py-4 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all active:scale-95">
+            Keep Records
+          </button>
+          <button onclick="confirmDeleteAll()"
+            class="px-8 py-4 text-white bg-red-600 hover:bg-red-700 rounded-2xl font-bold shadow-xl shadow-red-200 transition-all active:scale-95">
+            Yes, Delete All
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+
+    // Tab switching
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+      // Show selected tab
+      const tabElement = document.getElementById(`${tabName}-tab`);
+      if (tabElement) {
+        tabElement.classList.remove('hidden');
+      }
+
+      // Highlight button
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+
+      // Load data for tab
+      if (tabName === 'promoters' && !window.promotersLoaded) {
+        loadPromoters();
+        window.promotersLoaded = true;
+      } else if (tabName === 'templates' && !window.templatesLoaded) {
+        loadTemplates();
+        window.templatesLoaded = true;
+      } else if (tabName === 'settings' && !window.settingsLoaded) {
+        loadSettings();
+        window.settingsLoaded = true;
+      }
+    }
+
+    async function apiCall(endpoint, options = {}) {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options
+      });
+      return res.json();
+    }
+
+    async function loadPromoters() {
+      try {
+        const { promoters } = await apiCall('/promoters');
+        window.allPromoters = promoters || [];
+        const list = document.getElementById('promoters-list');
+
+        if (!promoters || promoters.length === 0) {
+          list.innerHTML = '<p class="text-gray-500 py-4">No promoters yet. Download the Excel template from Settings to import.</p>';
+          return;
+        }
+
+        list.innerHTML = `
+          <table class="w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gray-200">
+                <th class="border border-gray-300 px-4 py-2 text-left">Employee No</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Promoter ID</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Name</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Brand</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Location</th>
+                <th class="border border-gray-300 px-4 py-2 text-center">Photo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${promoters.map(p => `
+                <tr class="hover:bg-gray-50">
+                  <td class="border border-gray-300 px-4 py-2">${p.employeeno || '-'}</td>
+                  <td class="border border-gray-300 px-4 py-2">${p.promoter_id || '-'}</td>
+                  <td class="border border-gray-300 px-4 py-2">${p.full_name || '-'}</td>
+                  <td class="border border-gray-300 px-4 py-2">${p.brand || '-'}</td>
+                  <td class="border border-gray-300 px-4 py-2">${p.location || '-'}</td>
+                  <td class="border border-gray-300 px-4 py-2 text-center">
+                    ${p.photo_path ? `<span class="text-green-600">✓</span>` : '<span class="text-gray-400">-</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p class="text-gray-600 text-sm mt-4">Total: ${promoters.length} promoter(s)</p>
+        `;
+      } catch (err) {
+        document.getElementById('promoters-list').innerHTML = `<p class="text-red-500">Error loading promoters: ${err.message}</p>`;
+      }
+    }
+
+    function openDeleteModal() {
+      const count = window.allPromoters ? window.allPromoters.length : 0;
+      if (count === 0) {
+        alert('There is no data to delete.');
+        return;
+      }
+      document.getElementById('deleteMessage').innerHTML = `You are about to delete <strong>${count}</strong> records. <br><span class="text-red-500 font-bold">This action is permanent!</span>`;
+      document.getElementById('deleteModal').classList.add('active');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('active');
+    }
+
+    async function confirmDeleteAll() {
+      closeDeleteModal();
+      try {
+        const res = await fetch('/api/promoters/all', {
+          method: 'DELETE'
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          alert('Database has been successfully cleared.');
+          loadPromoters();
+        } else {
+          alert('Error: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Failed to clear database: ' + error.message);
+      }
+    }
+
+    function deleteAllPromoters() {
+      openDeleteModal();
+    }
+
+    async function loadTemplates() {
+      try {
+        const { templates } = await apiCall('/templates');
+        const list = document.getElementById('templates-list');
+
+        if (!templates || templates.length === 0) {
+          list.innerHTML = '<p class="text-gray-500 py-4">No templates created yet.</p>';
+          return;
+        }
+
+        list.innerHTML = `
+          <table class="w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gray-200">
+                <th class="border border-gray-300 px-4 py-2 text-left">ID</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Template Name</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Dimensions</th>
+                <th class="border border-gray-300 px-4 py-2 text-left">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${templates.map(t => `
+                <tr class="hover:bg-gray-50">
+                  <td class="border border-gray-300 px-4 py-2">${t.id}</td>
+                  <td class="border border-gray-300 px-4 py-2">${t.template_name}</td>
+                  <td class="border border-gray-300 px-4 py-2">${t.width} x ${t.height}px</td>
+                  <td class="border border-gray-300 px-4 py-2">${new Date(t.created_at).toLocaleDateString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p class="text-gray-600 text-sm mt-4">Total: ${templates.length} template(s)</p>
+        `;
+      } catch (err) {
+        document.getElementById('templates-list').innerHTML = `<p class="text-red-500">Error loading templates: ${err.message}</p>`;
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const { settings } = await apiCall('/settings');
+
+        // Display defaults
+        const defaultsDiv = document.getElementById('settings-defaults');
+        if (settings && settings.idTemplate) {
+          defaultsDiv.innerHTML = `
+            <div><strong>ID Width:</strong> <span class="text-blue-600">${settings.idTemplate.defaultWidth}px</span></div>
+            <div><strong>ID Height:</strong> <span class="text-blue-600">${settings.idTemplate.defaultHeight}px</span></div>
+            <div><strong>Font:</strong> <span class="text-blue-600">${settings.idTemplate.defaultFont}</span></div>
+            <div><strong>Font Size:</strong> <span class="text-blue-600">${settings.idTemplate.defaultFontSize}pt</span></div>
+          `;
+        }
+
+        // Display detailed settings
+        const detailsDiv = document.getElementById('settings-details');
+        detailsDiv.innerHTML = `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded border-l-4 border-blue-500">
+              <h4 class="font-semibold text-blue-900 mb-2">📋 Excel Template</h4>
+              <p class="text-sm text-gray-700">22 fields for promoter import (aligned with database schema)</p>
+              <code class="text-xs text-gray-600 block mt-2">employeeno, promoter_id, first_name, last_name, full_name, date_hired, date_expired, brand, category, position, function, contact_no, address, emergency_contact, contact_person, location, district, division, hrgen, employer, nickname, photo_path</code>
+            </div>
+            
+            <div class="bg-white p-4 rounded border-l-4 border-green-500">
+              <h4 class="font-semibold text-green-900 mb-2">📸 Photo Upload</h4>
+              <p class="text-sm text-gray-700">Max size: 5MB | Formats: JPG, PNG, WEBP</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded border-l-4 border-purple-500">
+              <h4 class="font-semibold text-purple-900 mb-2">🎨 Template Designer</h4>
+              <p class="text-sm text-gray-700">Custom ID card dimensions and styling</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded border-l-4 border-orange-500">
+              <h4 class="font-semibold text-orange-900 mb-2">🔍 Search & Filter</h4>
+              <p class="text-sm text-gray-700">Search by name, employee#, or promoter ID</p>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('settings-defaults').innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`;
+      }
+    }
+
+    async function downloadTemplate() {
+      try {
+        const response = await fetch('/download-template');
+        if (!response.ok) throw new Error('Download failed');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Promoter_Import_Template_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        console.log('✓ Template downloaded successfully');
+      } catch (err) {
+        alert('Error downloading template: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    async function importPromoters() {
+      const fileInput = document.getElementById('importFile');
+      const btn = document.getElementById('importBtn');
+      const progress = document.getElementById('importProgress');
+      const result = document.getElementById('importResult');
+
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select an Excel file first');
+        return;
+      }
+
+      const fileName = (file.name || '').trim();
+      const extension = fileName.split('.').pop().toLowerCase();
+      const allowedExtensions = ['xlsx', 'xls', 'csv', 'xlsm'];
+
+      if (!allowedExtensions.includes(extension)) {
+        alert('Please select an Excel (.xlsx, .xls, .xlsm) or CSV file');
+        return;
+      }
+
+      // Show progress
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Importing...';
+      progress.classList.remove('hidden');
+      result.classList.add('hidden');
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/import-promoters', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Show success summary with error details if any
+          const errorsHtml = data.errors && data.errors.length > 0
+            ? `<div class="mt-2 p-2 rounded bg-red-50 border border-red-200 text-xs text-red-800"><strong>Import errors:</strong><ul>${data.errors.slice(0, 20).map(e => `<li>${e}</li>`).join('')}</ul>${data.errors.length > 20 ? `<div class="mt-1">...and ${data.errors.length - 20} more</div>` : ''}</div>`
+            : '';
+
+          result.innerHTML = `
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-semibold text-green-800">✅ Import Complete!</span>
+            </div>
+            <div class="text-sm">
+              <span>📈 Imported: <strong>${data.summary.imported_count}</strong></span><br>
+              <span>🔄 Updated: <strong>${data.summary.updated_count}</strong></span><br>
+              <span>❌ Failed: <strong>${data.summary.failed_count}</strong></span>
+            </div>
+            ${errorsHtml}
+            ${data.summary.failed_count > 0 ? `<button onclick="loadPromoters()" class="mt-2 text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">🔄 Refresh List</button>` : ''}
+          `;
+          result.classList.remove('hidden');
+
+          // Auto refresh promoters tab if active
+          if (!document.getElementById('settings-tab').classList.contains('hidden')) {
+            loadPromoters();
+          }
+
+          // Reset form
+          fileInput.value = '';
+        } else {
+          throw new Error(data.error || 'Import failed');
+        }
+      } catch (err) {
+        result.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${err.message}</div>`;
+        result.classList.remove('hidden');
+      } finally {
+        // Reset UI
+        btn.disabled = false;
+        btn.innerHTML = '📤 Upload & Import Excel File';
+        progress.classList.add('hidden');
+      }
+    }
+
+    // Initial load
+    window.addEventListener('load', () => {
+      loadPromoters();
+      window.promotersLoaded = true;
+    });
+  </script>
+
+</body>
+
+</html>

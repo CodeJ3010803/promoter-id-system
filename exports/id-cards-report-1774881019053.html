@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ID Generator Output Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+    h1 { margin: 0; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+    .stat-card { background: #f9f9f9; padding: 15px; border-left: 4px solid #667eea; border-radius: 4px; }
+    .stat-card h3 { margin: 0 0 10px 0; color: #333; }
+    .stat-card p { margin: 0; color: #666; font-size: 24px; font-weight: bold; }
+    .id-card { 
+      margin: 20px 0; padding: 20px; border: 2px solid #ddd; border-radius: 8px; 
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .id-card h2 { color: #667eea; margin-top: 0; }
+    .id-front, .id-back { 
+      background: white; padding: 15px; margin: 10px 0; border-radius: 4px; 
+      border: 1px solid #e0e0e0;
+    }
+    .id-front h3, .id-back h3 { margin: 0 0 10px 0; color: #555; }
+    .field { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .field:last-child { border-bottom: none; }
+    .label { color: #999; font-size: 12px; text-transform: uppercase; }
+    .value { color: #333; font-weight: bold; }
+    .barcode { text-align: center; padding: 15px; background: #f0f0f0; border-radius: 4px; margin: 10px 0; font-family: monospace; }
+    footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #999; font-size: 12px; }
+    .success { color: #4caf50; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎫 ID Generator Output Report</h1>
+      <p style="margin: 10px 0 0 0; opacity: 0.9;">Generated on 3/30/2026, 10:30:19 PM</p>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card">
+        <h3>Template</h3>
+        <p>Standard ID Card v1</p>
+      </div>
+      <div class="stat-card">
+        <h3>IDs Generated</h3>
+        <p class="success">3</p>
+      </div>
+      <div class="stat-card">
+        <h3>Dimensions</h3>
+        <p>1080x1920px</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Elements</h3>
+        <p>51</p>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 40px;">Generated ID Cards</h2>
+
+    
+      <div class="id-card">
+        <h2>ID Card #1</h2>
+        
+        <div class="id-front">
+          <h3>👤 Front Side (9 elements)</h3>
+          <div class="field">
+            <div class="label">Full Name</div>
+            <div class="value">Maria Cruz</div>
+          </div>
+          <div class="field">
+            <div class="label">ID</div>
+            <div class="value">P002</div>
+          </div>
+          <div class="field">
+            <div class="label">Employee No</div>
+            <div class="value">E002</div>
+          </div>
+          <div class="field">
+            <div class="label">Brand | Category</div>
+            <div class="value">Brand B | Standard</div>
+          </div>
+          <div class="field">
+            <div class="label">Location</div>
+            <div class="value">Quezon City - undefined</div>
+          </div>
+          <div class="field">
+            <div class="label">Contact</div>
+            <div class="value">+639179876543</div>
+          </div>
+          <div class="barcode">📊 Barcode: [P002]</div>
+        </div>
+
+        <div class="id-back">
+          <h3>📋 Back Side (8 elements)</h3>
+          <div class="field">
+            <div class="label">Division</div>
+            <div class="value">Marketing</div>
+          </div>
+          <div class="field">
+            <div class="label">Emergency Contact</div>
+            <div class="value">Juan Cruz</div>
+          </div>
+          <div class="field">
+            <div class="label">Contact Number</div>
+            <div class="value">+639175559999</div>
+          </div>
+          <div class="field">
+            <div class="label">HR Reference</div>
+            <div class="value">HR-002</div>
+          </div>
+          <div class="field">
+            <div class="label">Hired Date</div>
+            <div class="value">2023-02-20</div>
+          </div>
+        </div>
+      </div>
+    
+      <div class="id-card">
+        <h2>ID Card #2</h2>
+        
+        <div class="id-front">
+          <h3>👤 Front Side (9 elements)</h3>
+          <div class="field">
+            <div class="label">Full Name</div>
+            <div class="value">Robert Dela Cruz</div>
+          </div>
+          <div class="field">
+            <div class="label">ID</div>
+            <div class="value">P003</div>
+          </div>
+          <div class="field">
+            <div class="label">Employee No</div>
+            <div class="value">E003</div>
+          </div>
+          <div class="field">
+            <div class="label">Brand | Category</div>
+            <div class="value">Brand A | Premium</div>
+          </div>
+          <div class="field">
+            <div class="label">Location</div>
+            <div class="value">Makati - undefined</div>
+          </div>
+          <div class="field">
+            <div class="label">Contact</div>
+            <div class="value">+639178882211</div>
+          </div>
+          <div class="barcode">📊 Barcode: [P003]</div>
+        </div>
+
+        <div class="id-back">
+          <h3>📋 Back Side (8 elements)</h3>
+          <div class="field">
+            <div class="label">Division</div>
+            <div class="value">Operations</div>
+          </div>
+          <div class="field">
+            <div class="label">Emergency Contact</div>
+            <div class="value">Ana Dela Cruz</div>
+          </div>
+          <div class="field">
+            <div class="label">Contact Number</div>
+            <div class="value">+639175556666</div>
+          </div>
+          <div class="field">
+            <div class="label">HR Reference</div>
+            <div class="value">HR-003</div>
+          </div>
+          <div class="field">
+            <div class="label">Hired Date</div>
+            <div class="value">2023-03-10</div>
+          </div>
+        </div>
+      </div>
+    
+      <div class="id-card">
+        <h2>ID Card #3</h2>
+        
+        <div class="id-front">
+          <h3>👤 Front Side (9 elements)</h3>
+          <div class="field">
+            <div class="label">Full Name</div>
+            <div class="value">Maria Santos</div>
+          </div>
+          <div class="field">
+            <div class="label">ID</div>
+            <div class="value">E101</div>
+          </div>
+          <div class="field">
+            <div class="label">Employee No</div>
+            <div class="value">E101</div>
+          </div>
+          <div class="field">
+            <div class="label">Brand | Category</div>
+            <div class="value">Brand A | Category 1</div>
+          </div>
+          <div class="field">
+            <div class="label">Location</div>
+            <div class="value">Manila - undefined</div>
+          </div>
+          <div class="field">
+            <div class="label">Contact</div>
+            <div class="value">+639175551234</div>
+          </div>
+          <div class="barcode">📊 Barcode: [E101]</div>
+        </div>
+
+        <div class="id-back">
+          <h3>📋 Back Side (8 elements)</h3>
+          <div class="field">
+            <div class="label">Division</div>
+            <div class="value">Sales</div>
+          </div>
+          <div class="field">
+            <div class="label">Emergency Contact</div>
+            <div class="value">Juan Santos</div>
+          </div>
+          <div class="field">
+            <div class="label">Contact Number</div>
+            <div class="value">+639175555678</div>
+          </div>
+          <div class="field">
+            <div class="label">HR Reference</div>
+            <div class="value">HR-101</div>
+          </div>
+          <div class="field">
+            <div class="label">Hired Date</div>
+            <div class="value">2023-06-15</div>
+          </div>
+        </div>
+      </div>
+    
+
+    <footer>
+      <p>✅ All placeholder replacements completed successfully</p>
+      <p>✅ Front and back canvas elements preserved</p>
+      <p>✅ Ready for export to PNG/PDF</p>
+      <p style="margin-top: 20px;">Generated: 2026-03-30T14:30:19.053Z</p>
+    </footer>
+  </div>
+</body>
+</html>
