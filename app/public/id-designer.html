@@ -25,27 +25,60 @@
     }
 
     .field-button {
-      @apply px-3 py-2 m-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition cursor-move selected:bg-blue-700;
+      padding: 0.5rem 0.75rem;
+      margin: 0.25rem;
+      background-color: #3b82f6;
+      color: #ffffff;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      border-radius: 0.25rem;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: move;
+    }
+
+    .field-button:hover {
+      background-color: #2563eb;
     }
 
     .tool-button {
-      @apply px-3 py-2 m-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded transition;
+      padding: 0.5rem 0.75rem;
+      margin: 0.25rem;
+      background-color: #22c55e;
+      color: #ffffff;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      border-radius: 0.25rem;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .tool-button:hover {
+      background-color: #16a34a;
     }
 
     .tool-button.active {
-      @apply bg-green-700;
+      background-color: #15803d;
     }
 
     .color-picker {
-      @apply w-full h-10 cursor-pointer border rounded;
+      width: 100%;
+      height: 2.5rem;
+      cursor: pointer;
+      border: 1px solid #d1d5db;
+      border-radius: 0.25rem;
     }
 
     .canvas-label {
-      @apply text-center font-bold py-2 bg-gray-200;
+      text-align: center;
+      font-weight: 700;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+      background-color: #e5e7eb;
     }
 
     .control-panel {
-      @apply max-h-[80vh] overflow-y-auto z-5;
+      max-height: 80vh;
+      overflow-y: auto;
+      z-index: 5;
     }
 
     .canvas-container canvas {
