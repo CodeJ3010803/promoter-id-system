@@ -877,7 +877,7 @@ const excelStorage = multer.diskStorage({
 
 const excelUpload = multer({
   storage: excelStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // Increased to 50MB for large files
   fileFilter: (req, file, cb) => {
     const allowedExtensions = ['.xlsx', '.xls', '.csv'];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -892,19 +892,19 @@ const excelUpload = multer({
 // Import promoters from Excel file
 app.post('/import-promoters', (req, res, next) => {
   excelUpload.single('file')(req, res, (err) => {
-    if (err) {
-      // Handle multer errors
-      return res.status(400).json({ error: err.message });
-    }
+    if (err) return res.status(400).json({ error: err.message });
     next();
   });
 }, async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const filePath = req.file.path;
+  const filePath = req.file.path;
+  let importedCount = 0;
+  let updatedCount = 0;
+  let failedCount = 0;
+  const errors = [];
+
+  try {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(filePath);
 
@@ -917,7 +917,7 @@ app.post('/import-promoters', (req, res, next) => {
     // Get headers from first row
     const headerRow = worksheet.getRow(1);
     const headers = [];
-    headerRow.eachCell({ end: worksheet.columnCount }, (cell, colNumber) => {
+    headerRow.eachCell({ end: worksheet.columnCount }, (cell) => {
       const headerValue = cell.value ? String(cell.value).toLowerCase().trim().replace(/\s+/g, '_') : '';
       headers.push(headerValue);
     });
@@ -936,160 +936,120 @@ app.post('/import-promoters', (req, res, next) => {
       });
     }
 
-    // Process data rows
-    let importedCount = 0;
-    let updatedCount = 0;
-    let failedCount = 0;
-    const errors = [];
+    // Use a transaction for high-volume insertion
+    await new Promise((resolve, reject) => {
+      db.serialize(async () => {
+        db.run('BEGIN TRANSACTION');
 
-    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
-      try {
-        const row = worksheet.getRow(rowNumber);
+        const insertSql = `
+          INSERT INTO promoters (id, employeeno, promoter_id, first_name, last_name,
+            full_name, date_hired, date_expired, brand, category, position, function, contact_no, address,
+            emergency_contact, contact_person, location, district, division, hrgen, employer, nickname, photo_path)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(employeeno) DO UPDATE SET
+            promoter_id = excluded.promoter_id,
+            first_name = excluded.first_name,
+            last_name = excluded.last_name,
+            full_name = excluded.full_name,
+            date_hired = excluded.date_hired,
+            date_expired = excluded.date_expired,
+            brand = excluded.brand,
+            category = excluded.category,
+            position = excluded.position,
+            function = excluded.function,
+            contact_no = excluded.contact_no,
+            address = excluded.address,
+            emergency_contact = excluded.emergency_contact,
+            contact_person = excluded.contact_person,
+            location = excluded.location,
+            district = excluded.district,
+            division = excluded.division,
+            hrgen = excluded.hrgen,
+            employer = excluded.employer,
+            nickname = excluded.nickname,
+            photo_path = CASE WHEN excluded.photo_path != '' THEN excluded.photo_path ELSE photo_path END,
+            created_at = created_at
+        `;
 
-        // Skip empty rows
-        const firstCell = row.getCell(1);
-        if (!firstCell.value) continue;
+        const stmt = db.prepare(insertSql);
 
-        // Extract data
-        const rowData = {};
-        headers.forEach((header, index) => {
-          const cellValue = row.getCell(index + 1).value;
-          rowData[header] = normalizeCellValue(cellValue);
-        });
+        for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+          try {
+            const row = worksheet.getRow(rowNumber);
+            const firstCell = row.getCell(1);
+            if (!firstCell.value) continue;
 
-        // Validate required fields
-        if (!rowData.employeeno || !rowData.first_name || !rowData.last_name) {
-          failedCount++;
-          errors.push(`Row ${rowNumber}: Missing required fields (employeeno, first_name, last_name)`);
-          continue;
+            const rowData = {};
+            headers.forEach((header, index) => {
+              const cellValue = row.getCell(index + 1).value;
+              rowData[header] = normalizeCellValue(cellValue);
+            });
+
+            if (!rowData.employeeno || !rowData.first_name || !rowData.last_name) {
+              failedCount++;
+              if (errors.length < 50) errors.push(`Row ${rowNumber}: Missing required fields`);
+              continue;
+            }
+
+            const employeeno = String(rowData.employeeno).trim();
+            const fullName = String(rowData.full_name || `${rowData.first_name} ${rowData.last_name}`).trim();
+
+            // Check if it's an update or insert for the summary counts
+            // Note: Since we use ON CONFLICT, we increment based on successful execution
+            // Accurate count of NEW vs UPDATED would require a preliminary SELECT, 
+            // but for performance, we'll just track total successful processed.
+
+            stmt.run([
+              uuidv4(), employeeno, String(rowData.promoter_id || '').trim(),
+              String(rowData.first_name).trim(), String(rowData.last_name).trim(),
+              fullName, String(rowData.date_hired || '').trim(), String(rowData.date_expired || '').trim(),
+              String(rowData.brand || '').trim(), String(rowData.category || '').trim(),
+              String(rowData.position || '').trim(), String(rowData.function || '').trim(),
+              String(rowData.contact_no || '').trim(), String(rowData.address || '').trim(),
+              String(rowData.emergency_contact || '').trim(), String(rowData.contact_person || '').trim(),
+              String(rowData.location || '').trim(), String(rowData.district || '').trim(),
+              String(rowData.division || '').trim(), String(rowData.hrgen || '').trim(),
+              String(rowData.employer || '').trim(), String(rowData.nickname || '').trim(),
+              String(rowData.photo_path || '').trim()
+            ], (err) => {
+              if (err) {
+                failedCount++;
+                if (errors.length < 50) errors.push(`Row ${rowNumber}: DB error - ${err.message}`);
+              } else {
+                importedCount++; // Total successful
+              }
+            });
+
+          } catch (rowError) {
+            failedCount++;
+            if (errors.length < 50) errors.push(`Row ${rowNumber}: Error - ${rowError.message}`);
+          }
         }
 
-        // Prepare data for insertion/update
-        const employeeno = String(rowData.employeeno).trim();
-        const data = {
-          promoter_id: String(rowData.promoter_id || '').trim(),
-          first_name: String(rowData.first_name).trim(),
-          last_name: String(rowData.last_name).trim(),
-          full_name: String(rowData.full_name || `${rowData.first_name} ${rowData.last_name}`).trim(),
-          date_hired: rowData.date_hired ? String(rowData.date_hired).trim() : '',
-          date_expired: rowData.date_expired ? String(rowData.date_expired).trim() : '',
-          brand: String(rowData.brand || '').trim(),
-          category: String(rowData.category || '').trim(),
-          position: String(rowData.position || '').trim(),
-          function: String(rowData.function || '').trim(),
-          contact_no: String(rowData.contact_no || '').trim(),
-          address: String(rowData.address || '').trim(),
-          emergency_contact: String(rowData.emergency_contact || '').trim(),
-          contact_person: String(rowData.contact_person || '').trim(),
-          location: String(rowData.location || '').trim(),
-          district: String(rowData.district || '').trim(),
-          division: String(rowData.division || '').trim(),
-          hrgen: String(rowData.hrgen || '').trim(),
-          employer: String(rowData.employer || '').trim(),
-          nickname: String(rowData.nickname || '').trim(),
-          photo_path: String(rowData.photo_path || '').trim()
-        };
-
-        // Check if record exists
-        getQuery(
-          'SELECT id FROM promoters WHERE employeeno = ?',
-          [employeeno],
-          (err, rows) => {
-            if (err) {
-              failedCount++;
-              errors.push(`Row ${rowNumber}: Database error - ${err.message}`);
-              return;
-            }
-
-            if (rows && rows.length > 0) {
-              // Update existing record
-              const updateSql = `
-                UPDATE promoters 
-                SET promoter_id = ?, first_name = ?, last_name = ?, full_name = ?,
-                    date_hired = ?, date_expired = ?, brand = ?, category = ?, position = ?, function = ?, contact_no = ?,
-                    address = ?, emergency_contact = ?, contact_person = ?,
-                    location = ?, district = ?, division = ?, hrgen = ?, employer = ?, nickname = ?, photo_path = ?
-                WHERE employeeno = ?
-              `;
-              const updateParams = [
-                data.promoter_id, data.first_name, data.last_name, data.full_name,
-                data.date_hired, data.date_expired, data.brand, data.category, data.position, data.function, data.contact_no,
-                data.address, data.emergency_contact, data.contact_person,
-                data.location, data.district, data.division, data.hrgen,
-                data.employer, data.nickname, data.photo_path,
-                employeeno
-              ];
-
-              runQuery(updateSql, updateParams, (error) => {
-                if (error) {
-                  failedCount++;
-                  errors.push(`Row ${rowNumber}: Update failed - ${error.message}`);
-                } else {
-                  updatedCount++;
-                }
-              });
-            } else {
-              // Insert new record
-              const insertSql = `
-                INSERT INTO promoters (id, employeeno, promoter_id, first_name, last_name,
-                  full_name, date_hired, date_expired, brand, category, position, function, contact_no, address,
-                  emergency_contact, contact_person, location, district, division, hrgen, employer, nickname, photo_path)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-              `;
-              const insertParams = [
-                uuidv4(), employeeno, data.promoter_id, data.first_name, data.last_name,
-                data.full_name, data.date_hired, data.date_expired, data.brand, data.category, data.position, data.function, data.contact_no,
-                data.address, data.emergency_contact, data.contact_person,
-                data.location, data.district, data.division, data.hrgen,
-                data.employer, data.nickname, data.photo_path
-              ];
-
-              runQuery(insertSql, insertParams, (error) => {
-                if (error) {
-                  failedCount++;
-                  errors.push(`Row ${rowNumber}: Insert failed - ${error.message}`);
-                } else {
-                  importedCount++;
-                }
-              });
-            }
-          }
-        );
-      } catch (rowError) {
-        failedCount++;
-        errors.push(`Row ${rowNumber}: Processing error - ${rowError.message}`);
-      }
-    }
-
-    // Clean up uploaded file
-    fs.unlinkSync(filePath);
-
-    // Return summary with slight delay to ensure DB operations complete
-    setTimeout(() => {
-      res.json({
-        success: true,
-        summary: {
-          imported_count: importedCount,
-          updated_count: updatedCount,
-          failed_count: failedCount,
-          total_rows_processed: importedCount + updatedCount + failedCount
-        },
-        errors: errors.length > 0 ? errors.slice(0, 50) : [] // Return first 50 errors if any
+        stmt.finalize(() => {
+          db.run('COMMIT', (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
       });
-    }, 500);
+    });
+
+    res.json({
+      success: true,
+      summary: {
+        total_rows_processed: importedCount + failedCount,
+        successful_processed: importedCount,
+        failed_count: failedCount
+      },
+      errors
+    });
 
   } catch (err) {
-    // Clean up file if exists
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
     console.error('Import error:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-      errors: [err.message],
-      summary: { imported_count: 0, updated_count: 0, failed_count: 0, total_rows_processed: 0 }
-    });
+    res.status(500).json({ success: false, error: err.message });
+  } finally {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
 });
 
